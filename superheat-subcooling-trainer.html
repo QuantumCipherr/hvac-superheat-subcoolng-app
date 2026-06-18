@@ -298,9 +298,9 @@
 <body>
 
 <!-- STUDENT SIGN-IN (local profile, no server) -->
-<div id="loginScreen">
+<div id="loginScreen" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
   <div class="loginCard">
-    <div class="mk">The <b>Gauge</b> <i>Bench</i></div>
+    <div class="mk" id="loginTitle">The <b>Gauge</b> <i>Bench</i></div>
     <div class="sub">Student sign-in</div>
     <label for="loginName">Your name</label>
     <input type="text" id="loginName" autocomplete="name" placeholder="e.g. Jordan M.">
@@ -328,7 +328,7 @@
         <div class="gtag">Low side · suction</div>
         <div class="gwrap">
           <svg class="gauge" id="gaugeLo" viewBox="0 0 128 104" aria-label="Low side gauge"></svg>
-          <div class="greadout lo">
+          <div class="greadout lo" aria-live="polite" role="status">
             <div class="lab">Pressure</div>
             <div class="big"><span class="accent" id="loP">—</span><small> psig</small></div>
             <div class="sat">sat&nbsp;temp&nbsp;<b id="loT" class="accent">—</b>&nbsp;°F&nbsp;<span class="pill">dew</span></div>
@@ -339,7 +339,7 @@
         <div class="gtag">High side · liquid</div>
         <div class="gwrap">
           <svg class="gauge" id="gaugeHi" viewBox="0 0 128 104" aria-label="High side gauge"></svg>
-          <div class="greadout hi">
+          <div class="greadout hi" aria-live="polite" role="status">
             <div class="lab">Pressure</div>
             <div class="big"><span class="accent" id="hiP">—</span><small> psig</small></div>
             <div class="sat">sat&nbsp;temp&nbsp;<b id="hiT" class="accent">—</b>&nbsp;°F&nbsp;<span class="pill">bubble</span></div>
@@ -985,14 +985,45 @@ $("amb").addEventListener("input",e=>{AMB=+e.target.value;$("ambOut").textConten
    ============================================================ */
 const VIEWS={cycle:"view-cycle",basics:"view-basics",lookup:"view-lookup",calc:"view-calc",scn:"view-scn",practice:"view-practice",faults:"view-faults",ref:"view-ref"};
 let activeTab="cycle";
+function switchTab(key){
+  if(!VIEWS[key])return;
+  activeTab=key;
+  document.querySelectorAll(".tab").forEach(t=>{
+    const on=t.dataset.t===key;
+    t.classList.toggle("on",on);
+    t.setAttribute("aria-selected",on?"true":"false");
+    t.setAttribute("tabindex",on?"0":"-1");
+  });
+  Object.keys(VIEWS).forEach(k=>{const v=$(VIEWS[k]);if(v)v.classList.remove("on");});
+  const panel=$(VIEWS[key]);if(panel)panel.classList.add("on");
+  refreshAll();
+}
 $("tabs").addEventListener("click",e=>{
   const b=e.target.closest(".tab");if(!b)return;
-  activeTab=b.dataset.t;
-  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t===b));
-  Object.values(VIEWS).forEach(v=>$(v).classList.remove("on"));
-  $(VIEWS[activeTab]).classList.add("on");
-  refreshAll();
+  switchTab(b.dataset.t);
 });
+// arrow-key navigation across the tablist (WAI-ARIA pattern)
+$("tabs").addEventListener("keydown",e=>{
+  const list=[...document.querySelectorAll(".tab")];
+  const i=list.indexOf(e.target.closest(".tab"));if(i<0)return;
+  let j=-1;
+  if(e.key==="ArrowRight"||e.key==="ArrowDown")j=(i+1)%list.length;
+  else if(e.key==="ArrowLeft"||e.key==="ArrowUp")j=(i-1+list.length)%list.length;
+  else if(e.key==="Home")j=0;
+  else if(e.key==="End")j=list.length-1;
+  if(j>=0){e.preventDefault();list[j].focus();switchTab(list[j].dataset.t);}
+});
+function enhanceA11y(){
+  const nav=$("tabs");if(nav){nav.setAttribute("role","tablist");nav.setAttribute("aria-label","Sections");}
+  document.querySelectorAll(".tab").forEach(t=>{
+    const key=t.dataset.t,on=t.classList.contains("on");
+    t.setAttribute("role","tab");t.id="tab-"+key;
+    if(VIEWS[key])t.setAttribute("aria-controls",VIEWS[key]);
+    t.setAttribute("aria-selected",on?"true":"false");
+    t.setAttribute("tabindex",on?"0":"-1");
+  });
+  Object.keys(VIEWS).forEach(key=>{const sec=$(VIEWS[key]);if(sec){sec.setAttribute("role","tabpanel");sec.setAttribute("aria-labelledby","tab-"+key);sec.setAttribute("tabindex","0");}});
+}
 
 /* ============================================================
    CYCLE diagram + live state
@@ -2056,12 +2087,7 @@ function showLogin(){
 }
 function hideLogin(){const ov=$("loginScreen");if(ov)ov.style.display="none";}
 function activateTab(key){
-  if(!VIEWS[key])return;
-  activeTab=key;
-  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.t===key));
-  Object.values(VIEWS).forEach(v=>$(v).classList.remove("on"));
-  $(VIEWS[key]).classList.add("on");
-  refreshAll();
+  switchTab(key);
   try{window.scrollTo(0,0);}catch(e){}
 }
 function signIn(name,cls){
@@ -2139,6 +2165,14 @@ function initPractice(){
   // sign-in
   $("loginStart").addEventListener("click",()=>signIn($("loginName").value,$("loginClass").value));
   ["loginName","loginClass"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")signIn($("loginName").value,$("loginClass").value);}));
+  // keep keyboard focus inside the sign-in dialog while it's open
+  $("loginScreen").addEventListener("keydown",e=>{
+    if(e.key!=="Tab")return;
+    const f=[...$("loginScreen").querySelectorAll("input,button")];if(!f.length)return;
+    const first=f[0],last=f[f.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  });
   // an assignment link in the URL takes over once the student is in
   pendingAssignment=parseAssignment();
   // resume the last student on this device, else show the sign-in screen
@@ -2661,6 +2695,7 @@ buildRefTable();
 buildFaultTable();
 buildFaultSim();
 renderFaultSim();
+enhanceA11y();
 initPractice();
 refreshAll();
 </script>

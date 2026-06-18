@@ -28,15 +28,29 @@ recomputed from the **displayed, rounded** inputs so the student's arithmetic ma
   and the R-454B blend/glide column trap.
 - **Three levels:** Apprentice (±3 °F, hints), Journeyman (±2 °F, fewer hints),
   Master (±1.5 °F, no hints). Pressure answers use a curve-slope tolerance.
+- **Ten problem types**, including total-vs-evaporator superheat, the restriction-vs-
+  undercharge subcooling tiebreaker, and a "charge to which number?" concept item.
+  Applied problems show a digital-manifold saturation-temp readout on the gauges.
 - **Set flow:** choose 5/10/20 problems, level, types, and refrigerants; progress and
   running score; immediate worked solution after each submit; end-of-set summary with a
   missed-by-concept breakdown and **Retry missed concepts**.
+- **Practice or Exam mode:** exam mode is timed, withholds feedback until the end, then
+  shows a full per-question review with worked solutions.
 - **Seedable / reproducible:** set a seed and the whole set (and its answer key) is
   identical for the entire class. Generation routes through a seeded mulberry32 PRNG.
+- **Instructor assignment links:** copy a link that encodes the set settings + seed in the
+  URL hash; opening it signs the student in and auto-starts the identical set. No backend.
+- **Student results codes:** a base64 code (name, score, seed, time, missed concepts) the
+  student copies and the instructor pastes into a review box. No backend.
 - **Printable worksheet + matching answer key** (via the browser print dialog and a
   "Copy as text" option — no PDF library). The two always agree because they share a seed.
-- **Progress persistence** to `localStorage`, wrapped in `try/catch`, degrading to
+- **Student profiles** (name + class code) namespacing progress per device, and
+  **progress persistence** to `localStorage`, wrapped in `try/catch`, degrading to
   session-only if storage is unavailable. Includes a reset control.
+
+The Faults tab adds a symptom guide and an interactive **fault simulator** that drives the
+gauges and previews readings for each fault. The interface is keyboard-navigable with
+ARIA tab semantics; the diagnostic engine and PT data are unchanged throughout.
 
 ## Self-test (acceptance criteria)
 
