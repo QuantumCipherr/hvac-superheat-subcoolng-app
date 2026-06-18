@@ -1498,9 +1498,11 @@ function hashSeed(str){let h=2166136261>>>0;str=String(str);for(let i=0;i<str.le
 const PTYPES=[
   {key:"chart",     label:"Chart reading",          concept:"Chart reading"},
   {key:"superheat", label:"Superheat",              concept:"Superheat"},
+  {key:"totalsh",   label:"Total vs evaporator SH", concept:"Total superheat"},
   {key:"subcooling",label:"Subcooling",             concept:"Subcooling"},
   {key:"predict",   label:"Predict the reading",    concept:"Predicting readings"},
   {key:"charging",  label:"Charging decision",      concept:"Charging decision"},
+  {key:"chargenum", label:"Charge to which number?",concept:"Charging method"},
   {key:"diagnosis", label:"Diagnosis (four corner)",concept:"Diagnosis"},
   {key:"tiebreak",  label:"Restriction vs undercharge",concept:"Restriction vs undercharge"},
   {key:"blend",     label:"Blend / glide column",   concept:"Blend & glide"}
@@ -1865,7 +1867,67 @@ function genBlend(lvl,refKey){
   });
 }
 
-const GENERATORS={chart:genChart,superheat:genSuperheat,subcooling:genSubcooling,predict:genPredict,charging:genCharging,diagnosis:genDiagnosis,tiebreak:genTiebreak,blend:genBlend};
+// Total (compressor) superheat vs evaporator superheat — measured at the
+// condensing unit, where suction-line heat gain stacks on top.
+function genTotalSH(lvl,refKey){
+  const ref=REFS[refKey],L=LEVELS[lvl];
+  const evapT=genEvapT(lvl);
+  const lowP=r0(pFromTemp(ref.dew,evapT).v);
+  const sat=satTemp(ref,lowP,"dew");
+  const evapSH=Math.round(rand(8,14));          // superheat at the coil outlet
+  const gain=Math.round(rand(5,12));            // suction-line heat gain to the unit
+  const unitLine=Math.round(sat+evapSH+gain);   // suction line temp back at the unit
+  const totalKey=unitLine-sat, gainKey=totalKey-evapSH;
+  return finalize({
+    type:"totalsh",refKey,lvl,
+    stemHTML:`Measured back at the <b>condensing unit</b> on <b>${refKey}</b>: the suction line picks up heat between the coil and the unit, so this reads <i>total (compressor) superheat</i>. At the evaporator outlet the superheat was <b>${evapSH}°F</b>. Find the <b>total superheat</b> at the unit and the <b>suction-line heat gain</b>.`+
+      rdGrid([{cls:"lo",l:"Low-side gauge",v:lowP,u:"psig",sub:satReadout(sat,"dew")},{cls:"lo",l:"Suction line @ unit",v:unitLine,u:"°F"},{cls:"",l:"Evaporator superheat",v:evapSH,u:"°F"}]),
+    stemText:`${refKey} at the condensing unit: low-side ${lowP} psig, suction line ${unitLine} °F; evaporator superheat ${evapSH} °F. Total superheat and suction-line gain?`,
+    givens:[`Measured at the condensing unit`,`Low-side gauge: ${lowP} psig`,`Suction line @ unit: ${unitLine} °F`,`Evaporator superheat: ${evapSH} °F`],
+    fields:[
+      {label:"Total superheat",unit:"°F",key:totalKey,tol:L.tolF},
+      {label:"Suction-line gain",unit:"°F",key:gainKey,tol:L.tolF}],
+    choice:null,
+    recompute:()=>{const st=satTemp(ref,lowP,"dew");return [unitLine-st,(unitLine-st)-evapSH];},
+    solutionHTML:stepsBlock([
+      ["suction pressure",`${lowP} psig`],
+      ["→ sat temp (dew)",`${r1(sat)} °F`],
+      ["suction line @ unit",`${unitLine} °F`],
+      ["total superheat = line − dew",`${r1(totalKey)} °F`,false,"var(--lo)"],
+      ["− evaporator superheat",`${evapSH} °F`],
+      ["= suction-line heat gain",`${r1(gainKey)} °F`,true,"var(--brass)"]])+
+      whyLine(`total (compressor) superheat is measured at the condensing unit, so the suction line's heat gain stacks on top of the evaporator superheat — it always reads higher.`,
+        `Compare against where the manufacturer specifies the measurement. A large gain points at a long or uninsulated suction line.`),
+    solutionText:`total SH ${r1(totalKey)} °F; suction-line gain ${r1(gainKey)} °F (evap SH ${evapSH})`,
+    answerSummary:`total ${r1(totalKey)}° · gain ${r1(gainKey)}°`,
+    hint:`Total superheat = suction line at the unit − saturation temp (dew). The gain is total minus the evaporator superheat.`
+  });
+}
+
+// Concept: which reading do you charge to for this metering device?
+function genChargeNum(lvl,refKey){
+  const txv=RAND()<0.5;
+  const dev=txv?"a TXV / EEV":"a fixed orifice (piston)";
+  const key=txv?"subcooling":"superheat";
+  const opts=[{v:"subcooling",label:"Subcooling"},{v:"superheat",label:"Superheat"},{v:"either",label:"Either — both are reliable targets"}];
+  return finalize({
+    type:"chargenum",refKey,lvl,
+    stemHTML:`You're charging a <b>${refKey}</b> system that uses <b>${dev}</b>. Which reading do you charge to?`,
+    stemText:`${refKey} with ${dev}. Charge to which number?`,
+    givens:[`Refrigerant: ${refKey}`,`Metering: ${dev}`],
+    fields:[],
+    choice:{label:"Charge to",options:opts,key},
+    recompute:()=>[],
+    solutionHTML:stepsBlock([["metering device",txv?"TXV / EEV":"Fixed orifice"],["charge to",key==="subcooling"?"Subcooling":"Superheat",true,key==="subcooling"?"var(--hi)":"var(--lo)"]])+
+      whyLine(txv?`a TXV modulates to hold superheat steady, so superheat barely moves with charge — <b>charge to subcooling</b> (data-plate target). Superheat is just a check.`:`a fixed orifice can't modulate, so superheat floats with charge — <b>charge to superheat</b> off the manufacturer's chart. Subcooling is informational.`,
+        `${PLATE_CAVEAT}`),
+    solutionText:`${txv?"TXV/EEV":"Fixed orifice"} → charge to ${key}`,
+    answerSummary:`Charge to ${key}`,
+    hint:txv?`A TXV controls superheat itself — so superheat can't tell you the charge.`:`A piston can't modulate, so superheat moves with charge.`
+  });
+}
+
+const GENERATORS={chart:genChart,superheat:genSuperheat,totalsh:genTotalSH,subcooling:genSubcooling,predict:genPredict,charging:genCharging,chargenum:genChargeNum,diagnosis:genDiagnosis,tiebreak:genTiebreak,blend:genBlend};
 
 function finalize(p){
   p.concept=PCONCEPT[p.type];
