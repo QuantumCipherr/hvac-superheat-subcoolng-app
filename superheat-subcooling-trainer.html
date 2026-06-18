@@ -71,7 +71,7 @@
   nav.tabs::-webkit-scrollbar{display:none}
   .tab{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);padding:13px 14px;cursor:pointer;white-space:nowrap;transition:.15s;display:flex;gap:8px;align-items:center}
   .tab .n{font-family:var(--mono);font-size:10px;color:var(--muted2)}
-  .tab:hover{color:var(--ink)} .tab.on{color:var(--ink);border-bottom-color:var(--lo)}
+  .tab:hover{color:var(--ink)} .tab.on{color:var(--ink);border-bottom-color:var(--lo);background:color-mix(in srgb,var(--lo) 9%,transparent)}
 
   main{padding:24px 0 80px;min-height:60vh}
   section.view{display:none;animation:fade .25s ease}
@@ -194,6 +194,13 @@
     .reading{grid-template-columns:1fr 1fr}
     .answers{grid-template-columns:1fr}
     .brand .mk{font-size:24px} .amb{margin-left:0}
+    /* tabs become a wrapped grid of clear, tappable buttons — nothing hidden off-screen */
+    nav.tabs{flex-wrap:wrap;gap:6px;border-bottom:none;padding:4px 0 8px;overflow:visible}
+    .tab{flex:1 1 29%;justify-content:center;text-align:center;padding:12px 6px;border:1px solid var(--line2);border-bottom:1px solid var(--line2);border-radius:9px;background:var(--panel)}
+    .tab .n{display:none}
+    .tab.on{border-color:var(--lo);background:color-mix(in srgb,var(--lo) 14%,var(--panel))}
+    .topbar{flex-wrap:wrap}
+    .studentbadge{margin-left:auto}
   }
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.flowdot{display:none!important}}
   :focus-visible{outline:2px solid var(--lo);outline-offset:2px;border-radius:4px}
@@ -238,10 +245,34 @@
   .solution .rule{color:var(--brass)}
   #pracPrint{display:none}
 
+  /* ---------- Student sign-in ---------- */
+  .studentbadge{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .studentbadge .who{font-family:var(--mono);font-size:12px;color:var(--ink);display:flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line2);border-radius:99px;padding:6px 12px}
+  .studentbadge .who .dotS{width:8px;height:8px;border-radius:99px;background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 22%,transparent)}
+  .studentbadge .who .cls{color:var(--brass)}
+  .studentbadge .switchBtn{font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;background:none;border:1px solid var(--line2);color:var(--muted);border-radius:8px;padding:6px 10px;cursor:pointer}
+  .studentbadge .switchBtn:hover{color:var(--ink);border-color:var(--lo)}
+  #loginScreen{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:22px;
+    background:radial-gradient(1200px 600px at 80% -10%, #16222c 0%, transparent 60%),radial-gradient(900px 500px at 0% 0%, #131c24 0%, transparent 55%),var(--bg)}
+  .loginCard{width:100%;max-width:420px;background:linear-gradient(165deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:var(--radius);padding:26px 24px}
+  .loginCard .mk{font-family:var(--disp);font-weight:700;font-size:30px;letter-spacing:.5px;text-transform:uppercase;line-height:.9;margin-bottom:4px}
+  .loginCard .mk b{color:var(--lo)} .loginCard .mk i{color:var(--hi);font-style:normal}
+  .loginCard .sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:22px}
+  .loginCard label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+  .loginCard input[type=text]{width:100%;font-family:var(--mono);font-size:16px;background:var(--bg2);border:1px solid var(--line2);color:var(--ink);border-radius:9px;padding:11px 12px;margin-bottom:14px;outline:none}
+  .loginCard input[type=text]:focus{border-color:var(--lo);box-shadow:0 0 0 3px rgba(67,182,255,.14)}
+  .loginErr{color:var(--warn);font-size:12.5px;min-height:1.1em;margin-bottom:8px}
+  .loginCard .btn{width:100%;justify-content:center;text-align:center}
+  .loginRecent{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+  .loginRecent .recentlab{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .recentChip{font-family:var(--mono);font-size:12.5px;background:var(--bg2);border:1px solid var(--line2);color:var(--ink);border-radius:8px;padding:8px 12px;cursor:pointer;margin:0 6px 6px 0}
+  .recentChip:hover{border-color:var(--lo)}
+  .loginNote{font-size:11.5px;color:var(--muted2);margin-top:16px;line-height:1.55}
+
   @media print{
     @page{margin:14mm}
     body{background:#fff;color:#000;font-size:12px}
-    header,nav.tabs,main>section.view,.cluster,.selrow{display:none!important}
+    header,nav.tabs,main>section.view,.cluster,.selrow,#loginScreen,.studentbadge{display:none!important}
     #pracPrint{display:block!important}
     #pracPrint h1{font-size:18px;margin:0 0 2px}
     #pracPrint .ph{font-size:11px;color:#333;margin:0 0 14px;border-bottom:1px solid #000;padding-bottom:8px}
@@ -258,6 +289,22 @@
 </head>
 <body>
 
+<!-- STUDENT SIGN-IN (local profile, no server) -->
+<div id="loginScreen">
+  <div class="loginCard">
+    <div class="mk">The <b>Gauge</b> <i>Bench</i></div>
+    <div class="sub">Student sign-in</div>
+    <label for="loginName">Your name</label>
+    <input type="text" id="loginName" autocomplete="name" placeholder="e.g. Jordan M.">
+    <label for="loginClass">Class code <span style="color:var(--muted2);text-transform:none;letter-spacing:0">(optional)</span></label>
+    <input type="text" id="loginClass" autocomplete="off" placeholder="e.g. HVAC-101">
+    <div class="loginErr" id="loginErr"></div>
+    <button class="btn" id="loginStart">Start practicing</button>
+    <div class="loginRecent" id="loginRecent" style="display:none"></div>
+    <p class="loginNote">Your name and progress are saved only on this device — no account, no server. Use the same name and class code to pick up where you left off.</p>
+  </div>
+</div>
+
 <header>
   <div class="wrap">
     <div class="topbar">
@@ -265,6 +312,7 @@
         <div class="mk">The <b>Gauge</b> <i>Bench</i></div>
         <div class="sub">Superheat &amp; Subcooling · grounded in real PT data</div>
       </div>
+      <div class="studentbadge" id="studentBadge" style="display:none"></div>
     </div>
 
     <div class="cluster">
@@ -1620,16 +1668,83 @@ let pracSettings={count:10,level:1,types:PTYPES.map(t=>t.key),refs:["R-22","R-41
 let pracProgress={answered:0,correct:0,streak:0,best:0,missed:{}};
 const PRAC_KEY="gaugebench.practice.v1";
 
+/* ---- student profile (local only; no server) ---- */
+const PROFILES_KEY="gaugebench.profiles.v1";
+const ACTIVE_KEY="gaugebench.active.v1";
+let activeProfile=null; // {name, cls}
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const profileId=p=>((p.cls||"_")+"::"+p.name).toLowerCase();
+const progressKey=()=>PRAC_KEY+"::"+(activeProfile?profileId(activeProfile):"_guest");
+function loadProfiles(){try{const r=localStorage.getItem(PROFILES_KEY);const a=r?JSON.parse(r):[];return Array.isArray(a)?a:[];}catch(e){return [];}}
+function saveProfiles(list){try{localStorage.setItem(PROFILES_KEY,JSON.stringify(list));}catch(e){}}
+function rememberProfile(p){const list=loadProfiles();if(!list.find(x=>profileId(x)===profileId(p)))list.push({name:p.name,cls:p.cls});saveProfiles(list);}
+function loadActive(){try{const r=localStorage.getItem(ACTIVE_KEY);return r?JSON.parse(r):null;}catch(e){return null;}}
+
 function loadProgress(){
-  try{const raw=localStorage.getItem(PRAC_KEY);if(raw){const o=JSON.parse(raw);if(o&&typeof o==="object")pracProgress=Object.assign(pracProgress,o);}}catch(e){/* sandboxed: session-only */}
+  pracProgress={answered:0,correct:0,streak:0,best:0,missed:{}};
+  try{const raw=localStorage.getItem(progressKey());if(raw){const o=JSON.parse(raw);if(o&&typeof o==="object")pracProgress=Object.assign(pracProgress,o);}}catch(e){/* sandboxed: session-only */}
 }
 function saveProgress(){
-  try{localStorage.setItem(PRAC_KEY,JSON.stringify(pracProgress));}catch(e){/* ignore */}
+  try{localStorage.setItem(progressKey(),JSON.stringify(pracProgress));}catch(e){/* ignore */}
 }
 function resetProgress(){
   pracProgress={answered:0,correct:0,streak:0,best:0,missed:{}};
-  try{localStorage.removeItem(PRAC_KEY);}catch(e){}
+  try{localStorage.removeItem(progressKey());}catch(e){}
   renderSetupStats();
+}
+
+function renderStudentBadge(){
+  const b=$("studentBadge");if(!b)return;
+  if(!activeProfile){b.style.display="none";b.innerHTML="";return;}
+  b.style.display="";
+  b.innerHTML=`<span class="who"><span class="dotS"></span>${esc(activeProfile.name)}${activeProfile.cls?` · <span class="cls">${esc(activeProfile.cls)}</span>`:""}</span>`+
+    `<button class="switchBtn" id="studentSwitch">Switch</button>`;
+  const sw=$("studentSwitch");if(sw)sw.addEventListener("click",signOut);
+}
+function showLogin(){
+  const ov=$("loginScreen");if(ov)ov.style.display="flex";
+  const list=loadProfiles();const box=$("loginRecent");
+  if(box){
+    if(list.length){
+      box.style.display="";
+      box.innerHTML='<div class="recentlab">Continue as</div>'+list.map((p,i)=>`<button class="recentChip" data-i="${i}">${esc(p.name)}${p.cls?` · ${esc(p.cls)}`:""}</button>`).join('');
+      box.querySelectorAll(".recentChip").forEach(btn=>btn.addEventListener("click",()=>{const p=list[+btn.dataset.i];signIn(p.name,p.cls);}));
+    }else{box.style.display="none";box.innerHTML="";}
+  }
+  setTimeout(()=>{try{$("loginName").focus();}catch(e){}},40);
+}
+function hideLogin(){const ov=$("loginScreen");if(ov)ov.style.display="none";}
+function activateTab(key){
+  if(!VIEWS[key])return;
+  activeTab=key;
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.t===key));
+  Object.values(VIEWS).forEach(v=>$(v).classList.remove("on"));
+  $(VIEWS[key]).classList.add("on");
+  refreshAll();
+  try{window.scrollTo(0,0);}catch(e){}
+}
+function signIn(name,cls){
+  name=(name||"").trim();cls=(cls||"").trim();
+  const err=$("loginErr");
+  if(!name){if(err)err.textContent="Enter your name to start.";return;}
+  if(err)err.textContent="";
+  activeProfile={name,cls};
+  try{localStorage.setItem(ACTIVE_KEY,JSON.stringify(activeProfile));}catch(e){}
+  rememberProfile(activeProfile);
+  hideLogin();renderStudentBadge();
+  pracState=null;
+  $("pracRun").style.display="none";$("pracSummary").style.display="none";$("pracSetup").style.display="";
+  loadProgress();renderSetupStats();
+  if($("loginName"))$("loginName").value="";if($("loginClass"))$("loginClass").value="";
+  activateTab("practice"); // land students on Practice right after sign-in
+}
+function signOut(){
+  activeProfile=null;
+  try{localStorage.removeItem(ACTIVE_KEY);}catch(e){}
+  pracProgress={answered:0,correct:0,streak:0,best:0,missed:{}};
+  pracState=null;
+  $("pracRun").style.display="none";$("pracSummary").style.display="none";$("pracSetup").style.display="";
+  renderStudentBadge();showLogin();
 }
 
 function initPractice(){
@@ -1667,8 +1782,13 @@ function initPractice(){
   $("pracPrintKey").addEventListener("click",()=>printSheet(true));
   $("pracCopyWS").addEventListener("click",()=>copySheet(false));
   $("pracCopyKey").addEventListener("click",()=>copySheet(true));
-  loadProgress();
-  renderSetupStats();
+  // sign-in
+  $("loginStart").addEventListener("click",()=>signIn($("loginName").value,$("loginClass").value));
+  ["loginName","loginClass"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")signIn($("loginName").value,$("loginClass").value);}));
+  // resume the last student on this device, else show the sign-in screen
+  const a=loadActive();
+  if(a&&a.name){activeProfile=a;hideLogin();renderStudentBadge();loadProgress();renderSetupStats();}
+  else{showLogin();}
 }
 function segSet(boxId,btn){document.querySelectorAll("#"+boxId+" button").forEach(x=>x.classList.toggle("on",x===btn));}
 function readTypeRefSettings(){
