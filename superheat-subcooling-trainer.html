@@ -1446,6 +1446,7 @@ const PTYPES=[
   {key:"predict",   label:"Predict the reading",    concept:"Predicting readings"},
   {key:"charging",  label:"Charging decision",      concept:"Charging decision"},
   {key:"diagnosis", label:"Diagnosis (four corner)",concept:"Diagnosis"},
+  {key:"tiebreak",  label:"Restriction vs undercharge",concept:"Restriction vs undercharge"},
   {key:"blend",     label:"Blend / glide column",   concept:"Blend & glide"}
 ];
 const PTYPE_LABEL=Object.fromEntries(PTYPES.map(t=>[t.key,t.label]));
@@ -1733,6 +1734,48 @@ function genDiagnosis(lvl,refKey){
   });
 }
 
+// Restriction vs undercharge: both wear "high superheat + low suction".
+// Subcooling breaks the tie (undercharge low; restriction normal-to-high).
+function genTiebreak(lvl,refKey){
+  const L=LEVELS[lvl];
+  const faultKey=RAND()<0.5?"undercharge":"restriction";
+  const s=makeScenario(refKey,new Set([faultKey]));
+  const opts=[
+    {v:"undercharge",label:"Undercharge — leak-check & weigh in to subcooling"},
+    {v:"restriction",label:"Liquid-line restriction — find & clear it (don't add charge)"},
+    {v:"overcharge", label:"Overcharge — recover refrigerant"}
+  ];
+  const tiebreak=faultKey==="undercharge"
+    ? `subcooling is only <b>${r1(s.keySC)} °F</b> — low. Little liquid is stacked in the condenser, so the system is <b>low on charge (undercharge)</b>.`
+    : `subcooling is <b>${r1(s.keySC)} °F</b> — normal-to-high. The charge is in the condenser, stacked behind the choke point, so this is a <b>liquid-line restriction</b>, not a low charge.`;
+  return finalize({
+    type:"tiebreak",refKey,lvl,
+    stemHTML:`High superheat and low suction on <b>${refKey}</b> — low charge, or a restriction? Compute superheat and subcooling, then make the call. <span class="small">(The number that breaks the tie is subcooling.)</span>`+
+      `<div class="scn-meta" style="margin:12px 0">`+
+        metaCell("Metering",s.meterDev)+metaCell("Outdoor",s.amb+" °F")+metaCell("Return air",s.returnAir+" °F")+metaCell("Refrigerant",s.ref)+
+      `</div>`+
+      rdGrid([
+        {cls:"lo",l:"Low-side gauge",v:s.lowP,u:"psig",sub:satReadout(s.satLow,"dew")},{cls:"lo",l:"Suction line temp",v:s.sucLine,u:"°F"},
+        {cls:"hi",l:"High-side gauge",v:s.highP,u:"psig",sub:satReadout(s.satHigh,"bubble")},{cls:"hi",l:"Liquid line temp",v:s.liqLine,u:"°F"}]),
+    stemText:`${s.ref} (${s.meterDev}): high SH, low suction. Low ${s.lowP} psig / ${s.sucLine} °F; High ${s.highP} psig / ${s.liqLine} °F. SH, SC — undercharge or restriction?`,
+    givens:[`Metering: ${s.meterDev}`,`Outdoor: ${s.amb} °F`,`Low-side: ${s.lowP} psig, suction line ${s.sucLine} °F`,`High-side: ${s.highP} psig, liquid line ${s.liqLine} °F`],
+    fields:[
+      {label:"Superheat",unit:"°F",key:s.keySH,tol:L.tolF},
+      {label:"Subcooling",unit:"°F",key:s.keySC,tol:L.tolF}],
+    choice:{label:"Undercharge or restriction?",options:opts,key:faultKey},
+    recompute:()=>[s.sucLine-satTemp(REFS[s.ref],s.lowP,"dew"),satTemp(REFS[s.ref],s.highP,"bubble")-s.liqLine],
+    solutionHTML:stepsBlock([
+      ["superheat = line − dew",`${s.sucLine} − ${r1(s.satLow)} = ${r1(s.keySH)} °F`,false,"var(--lo)"],
+      ["subcooling = bubble − line",`${r1(s.satHigh)} − ${s.liqLine} = ${r1(s.keySC)} °F`,true,"var(--hi)"]])+
+      whyLine(`high superheat alone can't separate a low charge from a restriction — both starve the coil. Here ${tiebreak}`,
+        `High superheat rules out an overcharge. Undercharge runs LOW subcooling; a restriction holds NORMAL-to-HIGH subcooling. Confirm airflow and look for a temp drop / frost across the drier before touching the charge — and never add refrigerant to a restriction.`),
+    solutionText:`SH ${r1(s.keySH)} °F, SC ${r1(s.keySC)} °F → ${faultKey==="undercharge"?"Undercharge":"Liquid-line restriction"}`,
+    answerSummary:`SH ${r1(s.keySH)}° · SC ${r1(s.keySC)}° · ${faultKey==="undercharge"?"Undercharge":"Restriction"}`,
+    hint:`Both suspects show high superheat. Compute subcooling: low → undercharge; normal/high → restriction.`,
+    diag:s
+  });
+}
+
 function genBlend(lvl,refKey){
   // glide trap is R-454B specific
   const ref=REFS["R-454B"],L=LEVELS[lvl];
@@ -1766,7 +1809,7 @@ function genBlend(lvl,refKey){
   });
 }
 
-const GENERATORS={chart:genChart,superheat:genSuperheat,subcooling:genSubcooling,predict:genPredict,charging:genCharging,diagnosis:genDiagnosis,blend:genBlend};
+const GENERATORS={chart:genChart,superheat:genSuperheat,subcooling:genSubcooling,predict:genPredict,charging:genCharging,diagnosis:genDiagnosis,tiebreak:genTiebreak,blend:genBlend};
 
 function finalize(p){
   p.concept=PCONCEPT[p.type];
