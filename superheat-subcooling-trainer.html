@@ -673,6 +673,13 @@
     <h2 class="title">Faults &amp; what the data shows</h2>
     <p class="lede">Superheat and subcooling together put you in one of the four corners, but the full picture needs the gauge pressures, the splits, and airflow. Here's what each common fault does to the readings — and the trap that catches techs most: a liquid-line restriction that wears an undercharge's disguise.</p>
 
+    <div class="card" style="margin-bottom:18px">
+      <span class="eyebrow">Simulate it on the gauges</span>
+      <p class="small" style="margin:2px 0 12px">Tap a fault to drive the manifold up top and preview the readings on your selected refrigerant. Every number comes straight from the PT data — change the <b>refrigerant</b> or the <b>outdoor</b> slider and the simulated readings move with it.</p>
+      <div class="chips" id="faultSimChips"></div>
+      <div id="faultSimOut"></div>
+    </div>
+
     <div class="card" style="border-left:3px solid var(--hi);margin-bottom:18px">
       <span class="eyebrow">The one techs misread</span>
       <h3 style="font-family:var(--disp);font-weight:700;font-size:22px;text-transform:uppercase;letter-spacing:.3px;margin:2px 0 8px">Liquid-line restriction</h3>
@@ -946,7 +953,7 @@ function buildRefButtons(){
     box.appendChild(b);
   });
 }
-$("amb").addEventListener("input",e=>{AMB=+e.target.value;$("ambOut").textContent=AMB+" °F";refreshCycle();});
+$("amb").addEventListener("input",e=>{AMB=+e.target.value;$("ambOut").textContent=AMB+" °F";refreshCycle();if(activeTab==="faults"&&simFault)renderFaultSim();});
 
 /* ============================================================
    TABS
@@ -1385,6 +1392,54 @@ function buildFaultTable(){
   t.innerHTML=head+rows;
 }
 
+/* ---- Fault simulator: drive the manifold + preview the readings for a
+   chosen fault, computed from the FAULTS band midpoints through the real
+   PT helpers, on the current refrigerant and outdoor temperature. ---- */
+const SIM_ORDER=["healthy","undercharge","overcharge","restriction","airflow","condenser","compressor"];
+let simFault=null;
+function simScenario(faultKey){
+  const ref=REFS[CUR],f=FAULTS[faultKey];
+  const mid=a=>(a[0]+a[1])/2;
+  const evapT=mid(f.evap), split=mid(f.split), SH=mid(f.sh), SC=mid(f.sc);
+  const condT=AMB+split;
+  const lowP=r0(pFromTemp(ref.dew,evapT).v), highP=r0(pFromTemp(ref.bubble,condT).v);
+  const sucLine=r0(evapT+SH), liqLine=r0(condT-SC);
+  const satLow=satTemp(ref,lowP,"dew"), satHigh=satTemp(ref,highP,"bubble");
+  return {faultKey,label:f.label,lowP,highP,sucLine,liqLine,satLow,satHigh,
+    keySH:sucLine-satLow, keySC:satHigh-liqLine};
+}
+function buildFaultSim(){
+  const box=$("faultSimChips");if(!box)return;box.innerHTML="";
+  SIM_ORDER.forEach(k=>{
+    const b=document.createElement("button");
+    b.className="chip"+(simFault===k?" on":"");
+    b.textContent=FAULTS[k].label;
+    b.onclick=()=>{simFault=k;buildFaultSim();renderFaultSim();};
+    box.appendChild(b);
+  });
+}
+function renderFaultSim(){
+  const out=$("faultSimOut");if(!out)return;
+  if(!simFault){out.innerHTML='<p class="small" style="margin:10px 0 0;color:var(--muted2)">Pick a fault above to simulate the gauges and readings.</p>';return;}
+  const s=simScenario(simFault);
+  if(activeTab==="faults")setGauges(s.lowP,s.highP);
+  const cSH=classifySH(s.keySH), cSC=classifySC(s.keySC);
+  out.innerHTML=
+    `<div class="scn-meta" style="grid-template-columns:repeat(3,1fr);margin:14px 0 12px">`+
+      metaCell("Refrigerant",CUR)+metaCell("Outdoor",AMB+" °F")+metaCell("Fault",s.label)+`</div>`+
+    rdGrid([
+      {cls:"lo",l:"Low-side gauge",v:s.lowP,u:"psig",sub:satReadout(s.satLow,"dew")},
+      {cls:"lo",l:"Suction line temp",v:s.sucLine,u:"°F"},
+      {cls:"hi",l:"High-side gauge",v:s.highP,u:"psig",sub:satReadout(s.satHigh,"bubble")},
+      {cls:"hi",l:"Liquid line temp",v:s.liqLine,u:"°F"}])+
+    `<div class="grid2" style="margin-top:12px">`+
+      `<div class="result ${cSH?cSH.cls:''}"><div class="num" style="color:var(--lo)">${r1(s.keySH)}°</div><div class="verdict"><b>Superheat</b><br>${cSH?cSH.txt:''}</div></div>`+
+      `<div class="result ${cSC?cSC.cls:''}"><div class="num" style="color:var(--hi)">${r1(s.keySC)}°</div><div class="verdict"><b>Subcooling</b><br>${cSC?cSC.txt:''}</div></div>`+
+    `</div>`+
+    `<div class="matrix-hint" style="margin-top:14px">${fourCorner(cSH&&cSH.state,cSC&&cSC.state)}</div>`+
+    `<p class="note" style="margin:12px 0 0">${explain(simFault)} ${FOURCORNER_CAVEAT}</p>`;
+}
+
 /* ============================================================
    REFERENCE TABLE
    ============================================================ */
@@ -1420,6 +1475,7 @@ function refreshAll(){
   buildRefTable();
   if(activeTab==="scn" && scn) setGauges(scn.lowP,scn.highP);
   if(activeTab==="cycle"){const ref=REFS[CUR];setGauges(pFromTemp(ref.dew,40).v,pFromTemp(ref.bubble,AMB+20).v);}
+  if(activeTab==="faults") renderFaultSim();
 }
 
 /* ============================================================
@@ -2336,6 +2392,8 @@ drawCycle();
 buildFaultChips();
 buildRefTable();
 buildFaultTable();
+buildFaultSim();
+renderFaultSim();
 initPractice();
 refreshAll();
 </script>
