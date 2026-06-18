@@ -247,6 +247,10 @@
   .hintbox.show{display:block}
   .solution .why{font-family:var(--sans);font-size:13px;color:var(--muted);margin-top:8px;line-height:1.55}
   .solution .rule{color:var(--brass)}
+  details.exrev{border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin:0 0 8px;background:var(--bg2)}
+  details.exrev[open]{background:var(--panel)}
+  details.exrev summary{cursor:pointer;font-family:var(--mono);font-size:13px;color:var(--ink);list-style:none}
+  details.exrev summary::-webkit-details-marker{display:none}
   #pracPrint{display:none}
 
   /* ---------- Student sign-in ---------- */
@@ -613,6 +617,14 @@
           <p class="small" id="pracLevelNote" style="margin:8px 0 0"></p>
         </div>
         <div class="setblock">
+          <h4>Mode</h4>
+          <div class="seg" id="pracMode">
+            <button class="on" data-mode="practice">Practice</button>
+            <button data-mode="exam">Exam</button>
+          </div>
+          <p class="small" id="pracModeNote" style="margin:8px 0 0">Practice: feedback &amp; solution after each problem.</p>
+        </div>
+        <div class="setblock">
           <h4>Problem types</h4>
           <div class="checks" id="pracTypes"></div>
         </div>
@@ -640,15 +652,27 @@
 
       <hr class="sep" style="margin:18px 0">
       <div class="setblock" style="margin:0">
-        <h4>Instructor · worksheet &amp; answer key</h4>
-        <p class="small" style="margin:2px 0 10px">Generate a printable worksheet and a separate answer key from the settings and seed above. The two always agree because they share the seed. Uses the browser's print dialog — no PDF library.</p>
+        <h4>Instructor · assign to the class</h4>
+        <p class="small" style="margin:2px 0 10px">Copy a link that opens this exact set (same level, types, refrigerants, mode, and seed) and auto-starts it for every student — or print a worksheet and matching answer key. The link and the sheets all agree because they share the seed.</p>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn" id="pracCopyLink">Copy assignment link</button>
           <button class="btn ghost" id="pracPrintWS">Print worksheet</button>
           <button class="btn ghost" id="pracPrintKey">Print answer key</button>
-          <button class="btn ghost" id="pracCopyWS">Copy worksheet as text</button>
-          <button class="btn ghost" id="pracCopyKey">Copy answer key as text</button>
+          <button class="btn ghost" id="pracCopyWS">Copy worksheet text</button>
+          <button class="btn ghost" id="pracCopyKey">Copy answer key text</button>
         </div>
         <p class="small" id="pracCopyMsg" style="margin:8px 0 0;min-height:1em;color:var(--good)"></p>
+      </div>
+
+      <hr class="sep" style="margin:18px 0">
+      <div class="setblock" style="margin:0">
+        <h4>Instructor · read a student results code</h4>
+        <p class="small" style="margin:2px 0 10px">Paste a code a student sent after finishing a set to see their name, score, and missed concepts.</p>
+        <div class="seedrow" style="align-items:flex-start">
+          <input type="text" id="resReviewIn" placeholder="GB1-…" style="flex:1;min-width:200px;font-family:var(--mono);font-size:14px;background:var(--bg2);border:1px solid var(--line2);color:var(--ink);border-radius:9px;padding:10px 12px">
+          <button class="btn ghost" id="resReviewBtn">Read code</button>
+        </div>
+        <div id="resReviewOut" class="small" style="margin:10px 0 0"></div>
       </div>
     </div>
 
@@ -657,6 +681,7 @@
       <div class="prac-top">
         <span class="pcount" id="pracProgressTxt">Problem 1 of 10</span>
         <div class="progress"><div class="fill" id="pracProgressBar"></div></div>
+        <span class="pcount" id="pracTimer" style="display:none"></span>
         <span class="scoreline" id="pracScore">Score 0 / 0</span>
         <button class="btn ghost" id="pracQuit" style="padding:8px 12px">End set</button>
       </div>
@@ -1978,7 +2003,9 @@ function gradeProblem(p,answers){
    PRACTICE UI / SET FLOW
    ============================================================ */
 let pracState=null;
-let pracSettings={count:10,level:1,types:PTYPES.map(t=>t.key),refs:["R-22","R-410A"]};
+let pracSettings={count:10,level:1,mode:"practice",types:PTYPES.map(t=>t.key),refs:["R-22","R-410A"]};
+let pracTimerId=null;
+let pendingAssignment=null;
 let pracProgress={answered:0,correct:0,streak:0,best:0,missed:{}};
 const PRAC_KEY="gaugebench.practice.v1";
 
@@ -2051,12 +2078,13 @@ function signIn(name,cls){
   loadProgress();renderSetupStats();
   if($("loginName"))$("loginName").value="";if($("loginClass"))$("loginClass").value="";
   activateTab("practice"); // land students on Practice right after sign-in
+  if(pendingAssignment){const asg=pendingAssignment;pendingAssignment=null;applyAssignment(asg);}
 }
 function signOut(){
   activeProfile=null;
   try{localStorage.removeItem(ACTIVE_KEY);}catch(e){}
   pracProgress={answered:0,correct:0,streak:0,best:0,missed:{}};
-  pracState=null;
+  stopTimer();pracState=null;
   $("pracRun").style.display="none";$("pracSummary").style.display="none";$("pracSetup").style.display="";
   renderStudentBadge();showLogin();
 }
@@ -2087,6 +2115,10 @@ function initPractice(){
   $("pracLevel").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
     pracSettings.level=+b.dataset.l;segSet("pracLevel",b);applyLevelDefaults(+b.dataset.l);renderLevelNote();});
   renderLevelNote();
+  // mode
+  $("pracMode").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+    pracSettings.mode=b.dataset.mode;segSet("pracMode",b);renderModeNote();});
+  renderModeNote();
   // seed
   $("pracRandSeed").addEventListener("click",()=>{$("pracSeed").value=Math.floor(Math.random()*100000);});
   // actions
@@ -2096,12 +2128,23 @@ function initPractice(){
   $("pracPrintKey").addEventListener("click",()=>printSheet(true));
   $("pracCopyWS").addEventListener("click",()=>copySheet(false));
   $("pracCopyKey").addEventListener("click",()=>copySheet(true));
+  // assignment link + results review
+  $("pracCopyLink").addEventListener("click",()=>{
+    const s=settingsFromUI(currentSeed());$("pracSeed").value=s.seed; // surface the seed actually used
+    const link=buildAssignmentLink(s);
+    copyText(link,()=>{const m=$("pracCopyMsg");m.style.color="var(--good)";m.textContent="Assignment link copied — send it to your class (seed "+s.seed+").";},
+      ()=>{const m=$("pracCopyMsg");m.style.color="var(--warn)";m.textContent="Copy failed — long-press to select: "+link;});
+  });
+  $("resReviewBtn").addEventListener("click",reviewResultsCode);
   // sign-in
   $("loginStart").addEventListener("click",()=>signIn($("loginName").value,$("loginClass").value));
   ["loginName","loginClass"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")signIn($("loginName").value,$("loginClass").value);}));
+  // an assignment link in the URL takes over once the student is in
+  pendingAssignment=parseAssignment();
   // resume the last student on this device, else show the sign-in screen
   const a=loadActive();
-  if(a&&a.name){activeProfile=a;hideLogin();renderStudentBadge();loadProgress();renderSetupStats();}
+  if(a&&a.name){activeProfile=a;hideLogin();renderStudentBadge();loadProgress();renderSetupStats();
+    if(pendingAssignment){const asg=pendingAssignment;pendingAssignment=null;applyAssignment(asg);}}
   else{showLogin();}
 }
 function segSet(boxId,btn){document.querySelectorAll("#"+boxId+" button").forEach(x=>x.classList.toggle("on",x===btn));}
@@ -2123,6 +2166,19 @@ function renderLevelNote(){
   };
   $("pracLevelNote").textContent=notes[pracSettings.level]||"";
 }
+function renderModeNote(){
+  const el=$("pracModeNote");if(!el)return;
+  el.textContent=pracSettings.mode==="exam"
+    ? "Exam: timed, no feedback until the end, then a full review."
+    : "Practice: feedback & solution after each problem.";
+}
+function fmtTime(ms){const s=Math.max(0,Math.floor(ms/1000));const m=Math.floor(s/60);const r=s%60;return (m<10?"0":"")+m+":"+(r<10?"0":"")+r;}
+function startTimer(){
+  const t=$("pracTimer");if(!t)return;t.style.display="";
+  const tick=()=>{if(pracState&&pracState.startTime)t.textContent="⏱ "+fmtTime(Date.now()-pracState.startTime);};
+  tick();pracTimerId=setInterval(tick,1000);
+}
+function stopTimer(){if(pracTimerId){clearInterval(pracTimerId);pracTimerId=null;}const t=$("pracTimer");if(t)t.style.display="none";}
 function renderSetupStats(){
   const msg=$("pracCopyMsg");
   if(pracProgress.answered>0){
@@ -2139,65 +2195,72 @@ function currentSeed(){
 }
 function settingsFromUI(seed){
   readTypeRefSettings();
-  return {count:pracSettings.count,level:pracSettings.level,
+  return {count:pracSettings.count,level:pracSettings.level,mode:pracSettings.mode,
     types:pracSettings.types.slice(),refs:pracSettings.refs.slice(),seed};
 }
 
 function startSet(retrySettings){
   const settings=retrySettings||settingsFromUI(currentSeed());
+  if(!settings.mode)settings.mode="practice";
   if(settings.types.length===0){alert("Pick at least one problem type.");return;}
   if(settings.refs.length===0){alert("Pick at least one refrigerant.");return;}
   const set=buildSet(settings);
-  pracState={set,idx:0,score:0,answered:false,results:new Array(set.length).fill(null),settings,missed:{}};
+  stopTimer();
+  pracState={set,idx:0,score:0,answered:false,mode:settings.mode,
+    results:new Array(set.length).fill(null),detail:new Array(set.length).fill(null),
+    settings,missed:{},startTime:Date.now()};
   $("pracSetup").style.display="none";
   $("pracSummary").style.display="none";
   $("pracRun").style.display="";
+  if(settings.mode==="exam")startTimer();else stopTimer();
   renderProblem();
 }
 
 function renderProblem(){
   const st=pracState,p=st.set[st.idx];
+  const exam=st.mode==="exam";
   st.answered=false;
   $("pracProgressTxt").textContent=`Problem ${st.idx+1} of ${st.set.length}`;
   $("pracProgressBar").style.width=(st.idx/st.set.length*100)+"%";
-  $("pracScore").textContent=`Score ${st.score} / ${st.idx}`;
+  $("pracScore").textContent=exam?`${st.idx} answered`:`Score ${st.score} / ${st.idx}`;
   const L=LEVELS[p.lvl];
-  let html=`<div style="margin-bottom:4px"><span class="ptag lvl${p.lvl}">L${p.lvl} · ${L.name}</span><span class="ptag">${p.refLabel}</span><span class="ptag">${p.label}</span></div>`;
+  const showHints=L.hints&&!exam;
+  const last=st.idx===st.set.length-1;
+  let html=`<div style="margin-bottom:4px"><span class="ptag lvl${p.lvl}">L${p.lvl} · ${L.name}</span><span class="ptag">${p.refLabel}</span><span class="ptag">${p.label}</span>${exam?'<span class="ptag" style="color:var(--hi);border-color:color-mix(in srgb,var(--hi) 40%,var(--line2))">Exam</span>':''}</div>`;
   html+=`<div class="qstem">${p.stemHTML}</div>`;
   if(p.fields.length){
     html+=`<div class="ansrow">`+p.fields.map((f,i)=>
-      `<div class="ai"><label>${f.label}</label><div class="inp"><input type="number" step="any" id="pracF${i}" placeholder="${f.unit}"><span class="unit">${f.unit}</span></div></div>`
+      `<div class="ai"><label for="pracF${i}">${f.label}</label><div class="inp"><input type="number" step="any" id="pracF${i}" placeholder="${f.unit}"><span class="unit">${f.unit}</span></div></div>`
     ).join('')+`</div>`;
   }
   if(p.choice){
-    html+=`<p class="small" style="margin:10px 0 4px">${p.choice.label}:</p><div class="mcgrid" id="pracMC">`+
-      p.choice.options.map(o=>`<button class="dx" data-v="${o.v}">${o.label}</button>`).join('')+`</div>`;
+    html+=`<p class="small" style="margin:10px 0 4px">${p.choice.label}:</p><div class="mcgrid" id="pracMC" role="group" aria-label="${p.choice.label}">`+
+      p.choice.options.map(o=>`<button class="dx" data-v="${o.v}" aria-pressed="false">${o.label}</button>`).join('')+`</div>`;
   }
+  const submitLabel=exam?(last?"Submit & finish":"Submit & next"):"Submit";
   html+=`<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">`+
-    `<button class="btn" id="pracSubmit">Submit</button>`+
-    (L.hints?`<button class="btn ghost" id="pracHintBtn">Hint</button>`:``)+
+    `<button class="btn" id="pracSubmit">${submitLabel}</button>`+
+    (showHints?`<button class="btn ghost" id="pracHintBtn">Hint</button>`:``)+
     `<button class="btn ghost" id="pracNext" style="display:none">Next</button>`+
     `</div>`;
-  if(L.hints)html+=`<div class="hintbox" id="pracHint">${p.hint}</div>`;
-  html+=`<div class="feedback" id="pracFeedback"></div>`;
+  if(showHints)html+=`<div class="hintbox" id="pracHint">${p.hint}</div>`;
+  html+=`<div class="feedback" id="pracFeedback" aria-live="polite"></div>`;
   $("pracProblem").innerHTML=html;
 
   let sel=null;
   if(p.choice){
     $("pracMC").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||st.answered)return;
-      sel=b.dataset.v;$("pracMC").querySelectorAll(".dx").forEach(x=>x.classList.toggle("sel",x===b));});
+      sel=b.dataset.v;$("pracMC").querySelectorAll(".dx").forEach(x=>{const on=x===b;x.classList.toggle("sel",on);x.setAttribute("aria-pressed",on?"true":"false");});});
   }
-  if(L.hints)$("pracHintBtn").addEventListener("click",()=>$("pracHint").classList.toggle("show"));
+  if(showHints)$("pracHintBtn").addEventListener("click",()=>$("pracHint").classList.toggle("show"));
   $("pracSubmit").addEventListener("click",()=>{
     if(st.answered)return;
     const answers={};p.fields.forEach((f,i)=>answers["f"+i]=$("pracF"+i).value);
     if(p.choice)answers.choice=sel;
-    // require an attempt
     const missingField=p.fields.some((f,i)=>$("pracF"+i).value.trim()==="");
     if(missingField||(p.choice&&!sel)){flashPrac("Enter every answer and pick an option first.");return;}
     submitProblem(p,answers,sel);
   });
-  // gauges follow the problem where pressures exist (cosmetic, current refrigerant)
 }
 
 function flashPrac(msg){const fb=$("pracFeedback");fb.className="feedback show no";fb.innerHTML=`<div>${msg}</div>`;}
@@ -2206,12 +2269,15 @@ function submitProblem(p,answers,sel){
   const st=pracState;st.answered=true;
   const res=gradeProblem(p,answers);
   st.results[st.idx]=res.allOk;
+  st.detail[st.idx]={answers:Object.assign({},answers),sel,res};
   if(res.allOk)st.score++;
   // lifetime progress
   pracProgress.answered++;
   if(res.allOk){pracProgress.correct++;pracProgress.streak++;pracProgress.best=Math.max(pracProgress.best,pracProgress.streak);}
   else{pracProgress.streak=0;st.missed[p.concept]=(st.missed[p.concept]||0)+1;pracProgress.missed[p.concept]=(pracProgress.missed[p.concept]||0)+1;}
   saveProgress();
+  // exam mode: record silently and move on — feedback comes at the end
+  if(st.mode==="exam"){advanceProblem();return;}
   // mark MC
   if(p.choice){$("pracMC").querySelectorAll(".dx").forEach(b=>{
     if(b.dataset.v===p.choice.key)b.classList.add("correct");
@@ -2237,8 +2303,24 @@ function advanceProblem(){
   else finishSet(false);
 }
 
+function examReviewItem(p,i,d){
+  if(!d){return `<details class="exrev"><summary><span style="color:var(--muted2)">—</span> <b>${i+1}.</b> ${p.label} <span class="small">(not answered)</span></summary><div class="qstem" style="font-size:14px">${p.stemHTML}</div><div class="work solution" style="margin-top:8px">${p.solutionHTML}</div></details>`;}
+  const ok=d.res.allOk;
+  const tag=ok?'<span class="accent-good">✓</span>':'<span style="color:var(--warn)">✗</span>';
+  let lines="";
+  d.res.fieldRes.forEach(r=>{lines+=`<div>${r.ok?'✓':'✗'} ${r.f.label} — you: <b>${isFinite(r.a)?r1(r.a):"—"} ${r.f.unit}</b>, answer: <b>${r1(r.f.key)} ${r.f.unit}</b></div>`;});
+  if(p.choice){const sl=(p.choice.options.find(o=>o.v===d.sel)||{}).label||"—";const kl=(p.choice.options.find(o=>o.v===p.choice.key)||{}).label;
+    lines+=`<div>${d.res.choiceRes.ok?'✓':'✗'} ${p.choice.label} — you: <b>${sl}</b>${d.res.choiceRes.ok?"":`, answer: <b>${kl}</b>`}</div>`;}
+  return `<details class="exrev"${ok?"":" open"}><summary>${tag} <b>${i+1}.</b> ${p.label} <span class="small">(${p.refLabel})</span></summary>`+
+    `<div class="qstem" style="font-size:14px">${p.stemHTML}</div>`+
+    `<div style="font-family:var(--mono);font-size:12.5px">${lines}</div>`+
+    `<div class="work solution" style="margin-top:8px">${p.solutionHTML}</div></details>`;
+}
 function finishSet(early){
   const st=pracState;if(!st)return;
+  stopTimer();
+  const elapsed=st.startTime?Date.now()-st.startTime:0;
+  const exam=st.mode==="exam";
   $("pracRun").style.display="none";$("pracSetup").style.display="";$("pracSummary").style.display="";
   const done=st.results.filter(r=>r!==null).length;
   const correct=st.results.filter(r=>r===true).length;
@@ -2251,16 +2333,23 @@ function finishSet(early){
       missEntries.map(([c,n])=>`<div class="miss"><span>${c}</span><b>${n} missed</b></div>`).join('')+`</div>`;
   }else if(done){missHTML=`<p class="small" style="margin:14px 0 0">Clean sweep — nothing missed.</p>`;}
   const missedConcepts=missEntries.map(e=>e[0]);
+  const reviewHTML=exam?(`<p class="small" style="margin:16px 0 6px">Review — every problem with the worked solution:</p>`+
+    st.set.map((p,i)=>examReviewItem(p,i,st.detail[i])).join('')):"";
+  pracState.lastResultsCode=buildResultsCode(st,correct,done,elapsed);
   $("pracSummary").innerHTML=
-    `<span class="eyebrow">Set complete${early?" (ended early)":""}</span>`+
+    `<span class="eyebrow">${exam?"Exam":"Set"} complete${early?" (ended early)":""}</span>`+
     `<div class="summary-stat"><div><div class="big" style="color:${pct>=80?"var(--good)":pct>=50?"var(--warn)":"var(--bad)"}">${pct}%</div></div>`+
-    `<div class="scoreline"><b style="color:var(--ink);font-size:16px">${correct} / ${done}</b> correct<br>Level ${st.settings.level} · seed ${st.settings.seed}</div></div>`+
+    `<div class="scoreline"><b style="color:var(--ink);font-size:16px">${correct} / ${done}</b> correct${exam?` · time ${fmtTime(elapsed)}`:""}<br>Level ${st.settings.level} · ${exam?"exam · ":""}seed ${st.settings.seed}</div></div>`+
     missHTML+
-    `<div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap">`+
+    `<div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">`+
       `<button class="btn" id="pracAgain">New set</button>`+
       (missedConcepts.length?`<button class="btn ghost" id="pracRetry">Retry missed concepts</button>`:``)+
-    `</div>`;
+      `<button class="btn ghost" id="pracCopyResults">Copy results code</button>`+
+    `</div>`+
+    `<p class="small" id="pracResultsMsg" style="margin:8px 0 0;min-height:1em;color:var(--good)"></p>`+
+    reviewHTML;
   $("pracAgain").addEventListener("click",()=>{$("pracSummary").style.display="none";});
+  $("pracCopyResults").addEventListener("click",()=>copyResultsCode(pracState&&pracState.lastResultsCode));
   if(missedConcepts.length){
     $("pracRetry").addEventListener("click",()=>{
       const types=PTYPES.filter(t=>missedConcepts.includes(t.concept)).map(t=>t.key);
@@ -2270,6 +2359,82 @@ function finishSet(early){
     });
   }
   renderSetupStats();
+}
+
+/* ============================================================
+   ASSIGNMENT LINKS (instructor → class) + RESULTS CODES
+   Both are pure client-side: a link encodes the set settings+seed
+   in the URL hash; a results code is a base64 payload a student
+   sends back. No server.
+   ============================================================ */
+function b64e(s){return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function b64d(s){s=String(s).replace(/-/g,'+').replace(/_/g,'/');return decodeURIComponent(escape(atob(s)));}
+
+function assignmentQuery(s){
+  const p=new URLSearchParams();
+  p.set("n",s.count);p.set("lvl",s.level);p.set("seed",s.seed);p.set("mode",s.mode||"practice");
+  p.set("types",s.types.join(","));p.set("refs",s.refs.join(","));
+  return "#set?"+p.toString();
+}
+function buildAssignmentLink(s){
+  const base=(typeof location!=="undefined")?(location.origin+location.pathname):"";
+  return base+assignmentQuery(s);
+}
+function parseAssignmentFrom(hash){
+  if(!hash||hash.indexOf("#set?")!==0)return null;
+  const p=new URLSearchParams(hash.slice(5));
+  const types=(p.get("types")||"").split(",").filter(t=>PTYPE_LABEL[t]);
+  const refs=(p.get("refs")||"").split(",").filter(k=>REFS[k]);
+  const level=Math.min(3,Math.max(1,parseInt(p.get("lvl"),10)||1));
+  const count=Math.max(1,parseInt(p.get("n"),10)||10);
+  const seed=parseInt(p.get("seed"),10)>>>0;
+  const mode=p.get("mode")==="exam"?"exam":"practice";
+  if(!types.length||!refs.length)return null;
+  return {count,level,mode,seed,types,refs};
+}
+function parseAssignment(){if(typeof location==="undefined")return null;return parseAssignmentFrom(location.hash);}
+function syncSetupUI(s){
+  pracSettings.count=s.count;pracSettings.level=s.level;pracSettings.mode=s.mode||"practice";
+  pracSettings.types=s.types.slice();pracSettings.refs=s.refs.slice();
+  document.querySelectorAll("#pracCount button").forEach(b=>b.classList.toggle("on",+b.dataset.c===s.count));
+  document.querySelectorAll("#pracLevel button").forEach(b=>b.classList.toggle("on",+b.dataset.l===s.level));
+  document.querySelectorAll("#pracMode button").forEach(b=>b.classList.toggle("on",b.dataset.mode===pracSettings.mode));
+  PTYPES.forEach(t=>{const el=$("pt_"+t.key);if(el)el.checked=s.types.includes(t.key);});
+  ORDER.forEach(k=>{const el=$("pr_"+k);if(el)el.checked=s.refs.includes(k);});
+  if($("pracSeed"))$("pracSeed").value=s.seed;
+  renderLevelNote();renderModeNote();
+}
+function applyAssignment(a){
+  syncSetupUI(a);
+  activateTab("practice");
+  startSet({count:a.count,level:a.level,mode:a.mode,seed:a.seed,types:a.types.slice(),refs:a.refs.slice()});
+}
+
+function buildResultsCode(st,correct,done,elapsed){
+  const payload={v:1,name:activeProfile?activeProfile.name:"",cls:activeProfile?activeProfile.cls:"",
+    lvl:st.settings.level,mode:st.mode,seed:st.settings.seed,n:done,c:correct,ms:Math.round(elapsed||0),miss:st.missed};
+  try{return "GB1-"+b64e(JSON.stringify(payload));}catch(e){return "";}
+}
+function decodeResultsCode(code){
+  const m=String(code||"").trim().match(/GB1-([A-Za-z0-9\-_]+)/);
+  if(!m)return null;
+  try{const o=JSON.parse(b64d(m[1]));return (o&&o.v===1)?o:null;}catch(e){return null;}
+}
+function copyResultsCode(code){
+  const msg=$("pracResultsMsg");if(!code){if(msg){msg.style.color="var(--warn)";msg.textContent="No results to copy.";}return;}
+  copyText(code,()=>{if(msg){msg.style.color="var(--good)";msg.textContent="Results code copied — send it to your instructor.";}},
+    ()=>{if(msg){msg.style.color="var(--warn)";msg.textContent="Copy failed — long-press to select: "+code;}});
+}
+function reviewResultsCode(){
+  const out=$("resReviewOut"),raw=$("resReviewIn").value;
+  const o=decodeResultsCode(raw);
+  if(!o){out.innerHTML='<span style="color:var(--warn)">Not a valid results code.</span>';return;}
+  const pct=o.n?Math.round(o.c/o.n*100):0;
+  const miss=Object.entries(o.miss||{}).sort((a,b)=>b[1]-a[1]);
+  out.innerHTML=`<div class="meta" style="margin-top:4px"><div class="l">${esc(o.name||"—")}${o.cls?" · "+esc(o.cls):""}</div>`+
+    `<div class="v">${o.c}/${o.n} <span style="font-size:14px;color:var(--muted)">(${pct}%)</span></div></div>`+
+    `<p class="small" style="margin:8px 0 0">Level ${o.lvl} · ${o.mode==="exam"?"exam · ":""}seed ${o.seed}${o.ms?` · time ${fmtTime(o.ms)}`:""}`+
+    (miss.length?` · missed: ${miss.map(([c,n])=>esc(c)+" ("+n+")").join(", ")}`:" · clean sweep")+`</p>`;
 }
 
 /* ============================================================
@@ -2332,9 +2497,13 @@ function copySheet(withKey){
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done,()=>fallbackCopy(text,done));}
   else fallbackCopy(text,done);
 }
-function fallbackCopy(text,done){
+function fallbackCopy(text,done,fail){
   try{const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);done();}
-  catch(e){const m=$("pracCopyMsg");m.style.color="var(--warn)";m.textContent="Copy failed — your browser blocked it. Use the print buttons instead.";}
+  catch(e){if(fail){fail(e);return;}const m=$("pracCopyMsg");m.style.color="var(--warn)";m.textContent="Copy failed — your browser blocked it. Use the print buttons instead.";}
+}
+function copyText(text,onok,onfail){
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(onok,()=>fallbackCopy(text,onok,onfail));}
+  else fallbackCopy(text,onok,onfail);
 }
 
 /* ============================================================
@@ -2442,6 +2611,42 @@ function runSelfTest(opts){
 
   // 7 — loaded clean (script executed to here without throwing)
   add("Loads clean — script parsed and ran with no exceptions",true,"single file, offline, existing tabs untouched");
+
+  // 8 — assignment links round-trip (settings → link → settings)
+  (function(){
+    let ok=true,note=[];
+    const cases=[
+      {count:10,level:2,mode:"practice",seed:4021,types:["chart","superheat","diagnosis"],refs:ALLREFS},
+      {count:5,level:1,mode:"exam",seed:0,types:["chargenum","blend"],refs:["R-454B"]},
+      {count:20,level:3,mode:"exam",seed:4294967295,types:Object.keys(GENERATORS),refs:["R-22","R-32"]}
+    ];
+    for(const s of cases){
+      const back=parseAssignmentFrom(assignmentQuery(s));
+      if(!back){ok=false;note.push("null parse");continue;}
+      const same=back.count===s.count&&back.level===s.level&&back.mode===s.mode&&(back.seed>>>0)===(s.seed>>>0)&&
+        back.types.join(",")===s.types.join(",")&&back.refs.join(",")===s.refs.join(",");
+      if(!same){ok=false;note.push(`mismatch seed ${s.seed}`);}
+    }
+    // a built set from a decoded link matches one from the original settings
+    const s0=cases[0];const a=buildSet(Object.assign({},s0));const b=buildSet(parseAssignmentFrom(assignmentQuery(s0)));
+    const setSame=a.map(p=>p.type+p.stemText).join("##")===b.map(p=>p.type+p.stemText).join("##");
+    if(!setSame){ok=false;note.push("set diverged");}
+    add("Assignment links — settings → link → identical set",ok,note.length?note.join("; "):"round-trip stable; decoded link rebuilds the same set");
+  })();
+
+  // 9 — results codes round-trip (payload → code → payload)
+  (function(){
+    let ok=true,note=[];
+    const st={mode:"exam",settings:{level:2,seed:4021},missed:{Diagnosis:2,Subcooling:1}};
+    const code=buildResultsCode(st,7,10,93000);
+    const back=decodeResultsCode(code);
+    if(!back){ok=false;note.push("null decode");}
+    else{
+      if(!(back.c===7&&back.n===10&&back.lvl===2&&back.seed===4021&&back.mode==="exam"&&back.ms===93000&&back.miss.Diagnosis===2)){ok=false;note.push("field mismatch");}
+    }
+    if(decodeResultsCode("not a code")!==null){ok=false;note.push("bad code not rejected");}
+    add("Results codes — encode → decode round-trip; junk rejected",ok,note.length?note.join("; "):"score, level, seed, time, missed concepts preserved");
+  })();
 
   const allPass=results.every(r=>r.pass);
   return {allPass,results};

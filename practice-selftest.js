@@ -64,18 +64,22 @@ const navigator = { clipboard: { writeText() { return Promise.resolve(); } } };
 const windowShim = { print() {}, alert() {}, setTimeout, clearTimeout };
 const requestAnimationFrame = (fn) => 0;
 const cancelAnimationFrame = () => {};
+const location = { hash: "", origin: "", pathname: "" };
+const history = { replaceState() {}, pushState() {} };
 
 /* ---- run the real page script ---- */
 let runSelfTest;
 try {
   const runner = new Function(
     "window", "document", "localStorage", "navigator",
-    "requestAnimationFrame", "cancelAnimationFrame", "alert", "setTimeout", "clearTimeout", "console",
+    "requestAnimationFrame", "cancelAnimationFrame", "alert", "setTimeout", "clearTimeout",
+    "location", "history", "console",
     scriptBody + "\n;return (typeof runSelfTest!=='undefined')?runSelfTest:(window&&window.runSelfTest);"
   );
   runSelfTest = runner(
     windowShim, document, localStorage, navigator,
-    requestAnimationFrame, cancelAnimationFrame, windowShim.alert, setTimeout, clearTimeout, console
+    requestAnimationFrame, cancelAnimationFrame, windowShim.alert, setTimeout, clearTimeout,
+    location, history, console
   );
 } catch (e) {
   console.error("\n✗ The page script threw while loading (this would be a console error in the browser):\n");
