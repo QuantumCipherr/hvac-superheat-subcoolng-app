@@ -227,6 +227,8 @@
   .ptag.lvl1{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,var(--line2))}
   .ptag.lvl2{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,var(--line2))}
   .ptag.lvl3{color:var(--hi);border-color:color-mix(in srgb,var(--hi) 40%,var(--line2))}
+  .rd .rdsub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:5px}
+  .rd .rdsub .satpill{display:inline-block;font-size:9px;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line2);border-radius:99px;padding:1px 6px;margin-left:5px;color:var(--muted2);vertical-align:middle}
   .qstem{font-size:15px;margin:10px 0 14px;line-height:1.55}
   .ansrow{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin:14px 0}
   .ansrow .ai{display:flex;flex-direction:column;gap:5px}
@@ -1394,9 +1396,12 @@ function stepsBlock(rows){
 }
 function rdGrid(cards){
   return '<div class="reading">'+cards.map(c=>
-    `<div class="rd ${c.cls||''}"><div class="l">${c.l}</div><div class="v">${c.v}<small> ${c.u}</small></div></div>`
+    `<div class="rd ${c.cls||''}"><div class="l">${c.l}</div><div class="v">${c.v}<small> ${c.u}</small></div>`+
+    (c.sub?`<div class="rdsub">${c.sub}</div>`:``)+`</div>`
   ).join('')+'</div>';
 }
+// digital-manifold style sat-temp readout shown under a gauge pressure
+function satReadout(satT,phase){return `sat ${r1(satT)}°F<span class="satpill">${phase}</span>`;}
 function whyLine(rule,why){return `<div class="why"><span class="rule">Rule:</span> ${rule}<br>${why}</div>`;}
 // pressure tolerance from the local curve slope so a ±°F band maps to psig
 function pSlopeTol(curve,t,tolF){const s=Math.abs(pFromTemp(curve,t+0.5).v-pFromTemp(curve,t-0.5).v);return Math.max(2,s*tolF);}
@@ -1468,8 +1473,8 @@ function genSuperheat(lvl,refKey){
   const key=sucLine-sat;
   return finalize({
     type:"superheat",refKey,lvl,
-    stemHTML:`<b>${refKey}</b> on the suction line. Find the <b>superheat</b>.`+
-      rdGrid([{cls:"lo",l:"Low-side gauge",v:lowP,u:"psig"},{cls:"lo",l:"Suction line temp",v:sucLine,u:"°F"}]),
+    stemHTML:`<b>${refKey}</b> on the suction line — the digital manifold already shows the saturation temperature. Find the <b>superheat</b>.`+
+      rdGrid([{cls:"lo",l:"Low-side gauge",v:lowP,u:"psig",sub:satReadout(sat,"dew")},{cls:"lo",l:"Suction line temp",v:sucLine,u:"°F"}]),
     stemText:`${refKey}: low-side ${lowP} psig, suction line ${sucLine} °F. Superheat?`,
     givens:[`Low-side gauge: ${lowP} psig`,`Suction line temp: ${sucLine} °F`],
     fields:[{label:"Superheat",unit:"°F",key,tol:L.tolF}],
@@ -1497,8 +1502,8 @@ function genSubcooling(lvl,refKey){
   const key=sat-liqLine;
   return finalize({
     type:"subcooling",refKey,lvl,
-    stemHTML:`<b>${refKey}</b> on the liquid line. Find the <b>subcooling</b>.`+
-      rdGrid([{cls:"hi",l:"High-side gauge",v:highP,u:"psig"},{cls:"hi",l:"Liquid line temp",v:liqLine,u:"°F"}]),
+    stemHTML:`<b>${refKey}</b> on the liquid line — the digital manifold already shows the saturation temperature. Find the <b>subcooling</b>.`+
+      rdGrid([{cls:"hi",l:"High-side gauge",v:highP,u:"psig",sub:satReadout(sat,"bubble")},{cls:"hi",l:"Liquid line temp",v:liqLine,u:"°F"}]),
     stemText:`${refKey}: high-side ${highP} psig, liquid line ${liqLine} °F. Subcooling?`,
     givens:[`High-side gauge: ${highP} psig`,`Liquid line temp: ${liqLine} °F`],
     fields:[{label:"Subcooling",unit:"°F",key,tol:L.tolF}],
@@ -1562,7 +1567,7 @@ function genCharging(lvl,refKey){
     return finalize({
       type:"charging",refKey,lvl,
       stemHTML:`<b>TXV</b> system on <b>${refKey}</b>. The data plate calls for <b>${target} °F</b> subcooling. Your readings are below — what's the call?`+
-        rdGrid([{cls:"hi",l:"High-side gauge",v:highP,u:"psig"},{cls:"hi",l:"Liquid line temp",v:liqLine,u:"°F"},{cls:"",l:"Target subcooling",v:target,u:"°F"}]),
+        rdGrid([{cls:"hi",l:"High-side gauge",v:highP,u:"psig",sub:satReadout(satB,"bubble")},{cls:"hi",l:"Liquid line temp",v:liqLine,u:"°F"},{cls:"",l:"Target subcooling",v:target,u:"°F"}]),
       stemText:`TXV ${refKey}, target SC ${target} °F. High-side ${highP} psig, liquid line ${liqLine} °F. Add / recover / leave?`,
       givens:[`Metering: TXV (charge to subcooling)`,`Target subcooling: ${target} °F`,`High-side gauge: ${highP} psig`,`Liquid line temp: ${liqLine} °F`],
       fields:[],
@@ -1593,7 +1598,7 @@ function genCharging(lvl,refKey){
     return finalize({
       type:"charging",refKey,lvl,
       stemHTML:`<b>Fixed-orifice</b> system on <b>${refKey}</b>. The manufacturer's charging chart calls for <b>${target} °F</b> superheat at these conditions. Your readings are below — what's the call?`+
-        rdGrid([{cls:"lo",l:"Low-side gauge",v:lowP,u:"psig"},{cls:"lo",l:"Suction line temp",v:sucLine,u:"°F"},{cls:"",l:"Target superheat",v:target,u:"°F"}]),
+        rdGrid([{cls:"lo",l:"Low-side gauge",v:lowP,u:"psig",sub:satReadout(sat,"dew")},{cls:"lo",l:"Suction line temp",v:sucLine,u:"°F"},{cls:"",l:"Target superheat",v:target,u:"°F"}]),
       stemText:`Fixed-orifice ${refKey}, chart target SH ${target} °F. Low-side ${lowP} psig, suction line ${sucLine} °F. Add / recover / leave?`,
       givens:[`Metering: fixed orifice (charge to superheat)`,`Chart target superheat: ${target} °F`,`Low-side gauge: ${lowP} psig`,`Suction line temp: ${sucLine} °F`],
       fields:[],
@@ -1625,8 +1630,8 @@ function genDiagnosis(lvl,refKey){
         metaCell("Metering",s.meterDev)+metaCell("Outdoor",s.amb+" °F")+metaCell("Return air",s.returnAir+" °F")+metaCell("Refrigerant",s.ref)+
       `</div>`+
       rdGrid([
-        {cls:"lo",l:"Low-side gauge",v:s.lowP,u:"psig"},{cls:"lo",l:"Suction line temp",v:s.sucLine,u:"°F"},
-        {cls:"hi",l:"High-side gauge",v:s.highP,u:"psig"},{cls:"hi",l:"Liquid line temp",v:s.liqLine,u:"°F"}]),
+        {cls:"lo",l:"Low-side gauge",v:s.lowP,u:"psig",sub:satReadout(s.satLow,"dew")},{cls:"lo",l:"Suction line temp",v:s.sucLine,u:"°F"},
+        {cls:"hi",l:"High-side gauge",v:s.highP,u:"psig",sub:satReadout(s.satHigh,"bubble")},{cls:"hi",l:"Liquid line temp",v:s.liqLine,u:"°F"}]),
     stemText:`${s.ref} (${s.meterDev}), outdoor ${s.amb} °F. Low ${s.lowP} psig / ${s.sucLine} °F line; High ${s.highP} psig / ${s.liqLine} °F line. SH, SC, fault?`,
     givens:[`Metering: ${s.meterDev}`,`Outdoor: ${s.amb} °F`,`Low-side: ${s.lowP} psig, suction line ${s.sucLine} °F`,`High-side: ${s.highP} psig, liquid line ${s.liqLine} °F`],
     fields:[
