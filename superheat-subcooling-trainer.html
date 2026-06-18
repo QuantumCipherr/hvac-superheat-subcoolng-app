@@ -229,6 +229,8 @@
   .ptag.lvl3{color:var(--hi);border-color:color-mix(in srgb,var(--hi) 40%,var(--line2))}
   .rd .rdsub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:5px}
   .rd .rdsub .satpill{display:inline-block;font-size:9px;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line2);border-radius:99px;padding:1px 6px;margin-left:5px;color:var(--muted2);vertical-align:middle}
+  .sym{font-family:var(--mono);font-size:12px;white-space:nowrap}
+  .sym.up{color:var(--warn)} .sym.dn{color:var(--lo)} .sym.nm{color:var(--muted)}
   .qstem{font-size:15px;margin:10px 0 14px;line-height:1.55}
   .ansrow{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin:14px 0}
   .ansrow .ai{display:flex;flex-direction:column;gap:5px}
@@ -359,7 +361,8 @@
       <button class="tab" data-t="calc"><span class="n">04</span>Calculator</button>
       <button class="tab" data-t="scn"><span class="n">05</span>Scenarios</button>
       <button class="tab" data-t="practice"><span class="n">06</span>Practice</button>
-      <button class="tab" data-t="ref"><span class="n">07</span>Reference</button>
+      <button class="tab" data-t="faults"><span class="n">07</span>Faults</button>
+      <button class="tab" data-t="ref"><span class="n">08</span>Reference</button>
     </nav>
   </div>
 </header>
@@ -664,6 +667,52 @@
     <div id="pracSummary" class="card" style="display:none"></div>
   </section>
 
+  <!-- FAULTS -->
+  <section class="view" id="view-faults">
+    <p class="eyebrow">Read the symptoms</p>
+    <h2 class="title">Faults &amp; what the data shows</h2>
+    <p class="lede">Superheat and subcooling together put you in one of the four corners, but the full picture needs the gauge pressures, the splits, and airflow. Here's what each common fault does to the readings — and the trap that catches techs most: a liquid-line restriction that wears an undercharge's disguise.</p>
+
+    <div class="card" style="border-left:3px solid var(--hi);margin-bottom:18px">
+      <span class="eyebrow">The one techs misread</span>
+      <h3 style="font-family:var(--disp);font-weight:700;font-size:22px;text-transform:uppercase;letter-spacing:.3px;margin:2px 0 8px">Liquid-line restriction</h3>
+      <p style="font-size:14px;margin:0 0 12px;max-width:72ch">Something is choking the high-pressure liquid on its way to the metering device — a <b>clogged filter-drier</b>, a <b>kinked or crushed liquid line</b>, debris or a screen, or a <b>stuck/partly-closed metering device</b>. Mass flow drops, so the evaporator, compressor, and condenser all run starved.</p>
+      <div class="scn-meta" style="grid-template-columns:repeat(4,1fr);margin:0 0 12px">
+        <div class="meta"><div class="l">Superheat</div><div class="v accent-lo">High ▲</div></div>
+        <div class="meta"><div class="l">Subcooling</div><div class="v accent-hi">High–normal ▲</div></div>
+        <div class="meta"><div class="l">Suction press.</div><div class="v">Low ▼</div></div>
+        <div class="meta"><div class="l">Head press.</div><div class="v">Normal–low</div></div>
+      </div>
+      <p style="font-size:13.5px;margin:0 0 12px;max-width:72ch">Liquid <b>stacks up before</b> the restriction (so condenser subcooling stays normal-to-high), while the evaporator <b>starves after</b> it (so superheat climbs and suction pressure falls). <b>High superheat AND high/normal subcooling at the same time is the restriction signature.</b></p>
+      <div class="danger">
+        <b>Don't mistake it for an undercharge.</b> Both show high superheat and low suction — so a tech reaching for a hose can dump refrigerant into a system that isn't low, and end up overcharged on top of a restriction. <b>Subcooling is the tiebreaker:</b> an <b>undercharge runs LOW subcooling</b> (little liquid in the condenser); a <b>restriction holds NORMAL-to-HIGH subcooling</b> (liquid stacked behind the choke point).
+      </div>
+      <p class="note" style="margin:12px 0 0">Confirm it at the part: a real restriction shows a <b>temperature drop across the drier or fitting</b> — it'll sweat or even frost right at the choke point while the line downstream is warmer/cooler than it should be. Low compressor amp draw backs it up. Find and clear the restriction; don't add charge.</p>
+    </div>
+
+    <div class="card" style="overflow-x:auto;margin-bottom:18px">
+      <span class="eyebrow">Symptom guide — the common faults</span>
+      <table id="faultTable"></table>
+      <p class="note">Superheat / subcooling ranges are the same bands the Scenarios and Practice diagnosis use. Directions are <i>relative to a healthy system</i> — actual psig depends on the refrigerant and the day's conditions, which the bench computes live. Always confirm airflow (indoor and outdoor) and the splits, and defer to the data plate before condemning a charge.</p>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <span class="eyebrow">Refrigerant-quality problems</span>
+        <p style="font-size:13.5px;margin:8px 0"><b>Noncondensables (air / moisture).</b> Air or nitrogen that won't condense collects in the top of the condenser and <b>pushes head pressure up</b> — higher than the outdoor temperature should produce. Subcooling can read normal-to-high but capacity is poor and the high side runs hot. Tell: the high-side <b>saturation temperature sits well above outdoor + a normal split</b> and won't square with a clean PT relationship. Cause: weak evacuation, a low-side leak drawing air in, or moisture. Fix: recover, evacuate to a deep vacuum (micron gauge), replace the drier.</p>
+        <p style="font-size:13.5px;margin:8px 0"><b>Moisture freezing at the metering device.</b> Water in the system freezes at the coldest restriction — the orifice or valve — and <b>intermittently blocks flow</b>. The unit cools fine, then shows restriction symptoms (high superheat, low suction, starved coil) until the ice melts and it recovers. A classic drier/moisture call.</p>
+        <p style="font-size:13.5px;margin:8px 0"><b>Wrong or mixed refrigerant.</b> If the gauge's saturation temperature won't line up with the measured line temperatures on a system you believe is correct, suspect the charge itself — air, the wrong refrigerant, or a blend that's lost composition. The PT chart only holds for the pure, correct refrigerant. None of R-22 / R-410A / R-32 / R-454B are drop-in interchangeable.</p>
+      </div>
+      <div class="card">
+        <span class="eyebrow">Metering-device faults</span>
+        <p style="font-size:13.5px;margin:8px 0"><b class="accent-hi">TXV stuck closed / underfeeding.</b> Looks just like a restriction — <b>high evaporator superheat, low suction, starved coil</b> — but the choke point is the valve itself. Check the sensing bulb charge and mounting before condemning the valve.</p>
+        <p style="font-size:13.5px;margin:8px 0"><b class="accent-hi">TXV stuck open / overfeeding or hunting.</b> The valve isn't controlling, so superheat falls toward zero (<b>low superheat, floodback risk</b>), often with high subcooling. Superheat that swings up and down is a hunting valve.</p>
+        <p style="font-size:13.5px;margin:8px 0"><b class="accent-lo">Fixed orifice / piston.</b> No valve to fail, but the piston or its inlet screen can <b>clog (a restriction)</b>, and with no modulation the <b>superheat swings with charge and load</b>. That's exactly why you charge a fixed orifice to superheat off the chart, and a TXV to subcooling.</p>
+        <div class="danger" style="margin-top:10px"><b>A2L note.</b> R-32 and R-454B are mildly flammable — A2L-rated tools, recovery, and leak detection, and EPA 608 to handle any of it.</div>
+      </div>
+    </div>
+  </section>
+
   <!-- REFERENCE -->
   <section class="view" id="view-ref">
     <p class="eyebrow">Keep it on the bench</p>
@@ -902,7 +951,7 @@ $("amb").addEventListener("input",e=>{AMB=+e.target.value;$("ambOut").textConten
 /* ============================================================
    TABS
    ============================================================ */
-const VIEWS={cycle:"view-cycle",basics:"view-basics",lookup:"view-lookup",calc:"view-calc",scn:"view-scn",practice:"view-practice",ref:"view-ref"};
+const VIEWS={cycle:"view-cycle",basics:"view-basics",lookup:"view-lookup",calc:"view-calc",scn:"view-scn",practice:"view-practice",faults:"view-faults",ref:"view-ref"};
 let activeTab="cycle";
 $("tabs").addEventListener("click",e=>{
   const b=e.target.closest(".tab");if(!b)return;
@@ -1300,6 +1349,40 @@ function explain(k){
     compressor:"Low-low: high suction, low head, weak subcooling — the compressor isn't building a normal split. Verify compression and valves before touching the charge."
   };
   return e[k]||"";
+}
+
+/* ============================================================
+   FAULT SYMPTOM GUIDE — SH/SC ranges pulled from FAULTS so the
+   table never contradicts the diagnosis/practice engine.
+   ============================================================ */
+const FAULT_GUIDE=[
+  {k:"healthy",    sh:["nm","Normal"],      sc:["nm","Normal"],      suction:["nm","Normal"], head:["nm","Normal"],     tells:"Splits in range; coil sweating not frosting; normal amp draw.", cause:"Correctly charged, airflow good."},
+  {k:"undercharge",sh:["up","High"],        sc:["dn","Low"],         suction:["dn","Low"],    head:["dn","Low"],        tells:"Low amp draw; warm liquid line; poor capacity; compressor may overheat.", cause:"Refrigerant loss / leak — system is low."},
+  {k:"overcharge", sh:["dn","Low"],         sc:["up","High"],        suction:["up","High"],   head:["up","High"],       tells:"High amp draw; poor dehumidification; liquid stacking in the condenser.", cause:"Too much refrigerant (or a TXV overfeeding)."},
+  {k:"restriction",sh:["up","High"],        sc:["up","High–normal"], suction:["dn","Low"],    head:["nm","Normal–low"], tells:"Temp drop / sweat or frost AT the restriction; low amps; starved coil.", cause:"Liquid-line restriction: clogged drier, kink, debris, stuck metering."},
+  {k:"airflow",    sh:["dn","Low"],         sc:["nm","Normal–high"], suction:["dn","Low"],    head:["dn","Low"],        tells:"Cold or icing evaporator; big air-side temp drop but low capacity.", cause:"Low indoor airflow: dirty filter/coil, weak blower, closed dampers."},
+  {k:"condenser",  sh:["nm","Normal"],      sc:["up","Normal–high"], suction:["nm","Normal"], head:["up","High"],       tells:"Hot condenser, high condensing temp; high amp draw.", cause:"Condenser problem: dirty coil, failing fan, recirculated air."},
+  {k:"compressor", sh:["dn","Low–normal"],  sc:["dn","Low"],         suction:["up","High"],   head:["dn","Low"],        tells:'"Low-low": high suction, low head; low amps; not building a split.', cause:"Weak compression / valves (or very low load)."}
+];
+function buildFaultTable(){
+  const t=$("faultTable");if(!t)return;
+  const arrow=d=>d==="up"?"▲":d==="dn"?"▼":"≈";
+  const sym=(c)=>`<span class="sym ${c[0]}">${arrow(c[0])} ${c[1]}</span>`;
+  const head=`<tr><th>Fault</th><th>Superheat</th><th>Subcooling</th><th>Suction (low)</th><th>Head (high)</th><th>Other tells</th><th>Likely cause / where</th></tr>`;
+  const rows=FAULT_GUIDE.map(g=>{
+    const f=FAULTS[g.k];
+    const shCell=`<b class="accent-lo">${arrow(g.sh[0])} ${g.sh[1]}</b> <span class="small">${f.sh[0]}–${f.sh[1]}°F</span>`;
+    const scCell=`<b class="accent-hi">${arrow(g.sc[0])} ${g.sc[1]}</b> <span class="small">${f.sc[0]}–${f.sc[1]}°F</span>`;
+    return `<tr>
+      <td><b>${f.label}</b></td>
+      <td>${shCell}</td>
+      <td>${scCell}</td>
+      <td>${sym(g.suction)}</td>
+      <td>${sym(g.head)}</td>
+      <td class="small">${g.tells}</td>
+      <td class="small">${g.cause}</td></tr>`;
+  }).join('');
+  t.innerHTML=head+rows;
 }
 
 /* ============================================================
@@ -2209,6 +2292,7 @@ buildRefButtons();
 drawCycle();
 buildFaultChips();
 buildRefTable();
+buildFaultTable();
 initPractice();
 refreshAll();
 </script>
