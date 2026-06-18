@@ -352,11 +352,12 @@
 
     <nav class="tabs" id="tabs">
       <button class="tab on" data-t="cycle"><span class="n">01</span>The Cycle</button>
-      <button class="tab" data-t="lookup"><span class="n">02</span>PT Lookup</button>
-      <button class="tab" data-t="calc"><span class="n">03</span>Calculator</button>
-      <button class="tab" data-t="scn"><span class="n">04</span>Scenarios</button>
-      <button class="tab" data-t="practice"><span class="n">05</span>Practice</button>
-      <button class="tab" data-t="ref"><span class="n">06</span>Reference</button>
+      <button class="tab" data-t="basics"><span class="n">02</span>Basics</button>
+      <button class="tab" data-t="lookup"><span class="n">03</span>PT Lookup</button>
+      <button class="tab" data-t="calc"><span class="n">04</span>Calculator</button>
+      <button class="tab" data-t="scn"><span class="n">05</span>Scenarios</button>
+      <button class="tab" data-t="practice"><span class="n">06</span>Practice</button>
+      <button class="tab" data-t="ref"><span class="n">07</span>Reference</button>
     </nav>
   </div>
 </header>
@@ -395,6 +396,70 @@
         </div>
         <p class="small" id="glideNote" style="margin-top:10px"></p>
       </div>
+    </div>
+  </section>
+
+  <!-- BASICS -->
+  <section class="view" id="view-basics">
+    <p class="eyebrow">Start here</p>
+    <h2 class="title">Superheat &amp; subcooling, plainly</h2>
+    <p class="lede">Two numbers tell you almost everything about how a system is running and whether the charge is right. Both come from one move: take a gauge pressure, convert it to the saturation temperature off the refrigerant's chart, and compare it to an actual pipe temperature. Superheat lives on the low side; subcooling lives on the high side.</p>
+
+    <div class="grid2" style="margin-bottom:18px">
+      <div class="card">
+        <h3 style="font-family:var(--disp);font-weight:700;font-size:22px;text-transform:uppercase;letter-spacing:.3px;color:var(--lo);margin:0 0 2px">Superheat</h3>
+        <div class="sgn" style="font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-bottom:12px">suction line temp − saturation temp (dew) · low side</div>
+        <p style="font-size:14px;margin:0 0 10px">It's how many degrees the vapor has been heated <b>above</b> its boiling point. You read it on the <b class="accent-lo">suction line</b>: clamp the line temperature, take the low-side gauge pressure, convert it to saturation temperature on the <b>dew</b> curve, and subtract.</p>
+        <div class="statebox sh"><h4>Why it matters</h4><p>Superheat proves the <b>last of the liquid boiled off inside the evaporator</b> before the vapor heads back to the compressor. Too little superheat means raw liquid is leaving the coil — it slams into the compressor (floodback / slugging) and washes out the oil. Healthy superheat is the compressor's insurance policy.</p></div>
+        <p class="note" style="margin:12px 0 0">Typical at the evaporator: ~8–15&nbsp;°F. Measured back at the condensing unit it reads higher (total/compressor superheat, often 20&nbsp;°F+) because the suction line picks up heat on the way.</p>
+      </div>
+      <div class="card">
+        <h3 style="font-family:var(--disp);font-weight:700;font-size:22px;text-transform:uppercase;letter-spacing:.3px;color:var(--hi);margin:0 0 2px">Subcooling</h3>
+        <div class="sgn" style="font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-bottom:12px">saturation temp (bubble) − liquid line temp · high side</div>
+        <p style="font-size:14px;margin:0 0 10px">It's how many degrees the liquid has been cooled <b>below</b> its condensing point. You read it on the <b class="accent-hi">liquid line</b>: take the high-side gauge pressure, convert it to saturation temperature on the <b>bubble</b> curve, and subtract the measured liquid-line temperature.</p>
+        <div class="statebox sc"><h4>Why it matters</h4><p>Subcooling proves a <b>solid column of liquid</b> — no vapor bubbles (flash gas) — is feeding the metering device. Flash gas starves the evaporator and kills capacity. Just as useful: subcooling reflects <b>how much refrigerant is stacked in the condenser</b>, so it rises and falls with the charge.</p></div>
+        <p class="note" style="margin:12px 0 0">Typical: ~8–12&nbsp;°F on a TXV system per the data plate. It's a window for sanity-checking, not a universal target — always read the plate.</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <span class="eyebrow">The part techs get wrong</span>
+      <h3 style="font-family:var(--disp);font-weight:700;font-size:21px;text-transform:uppercase;letter-spacing:.3px;margin:2px 0 6px">Which number you charge to depends on the metering device</h3>
+      <p style="font-size:14px;margin:0 0 16px;max-width:70ch">Adding or removing refrigerant moves both numbers — but only <b>one of them is a trustworthy charging target</b>, and which one depends on whether the metering device can modulate. Pick the wrong number and you'll chase your tail (or mis-charge the system).</p>
+
+      <div class="grid2">
+        <div class="card" style="border-left:3px solid var(--hi);background:color-mix(in srgb,var(--hi) 6%,var(--panel))">
+          <div class="kpi" style="font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">TXV / EEV</div>
+          <h4 style="font-family:var(--disp);font-weight:700;font-size:19px;text-transform:uppercase;margin:4px 0 8px">Charge to <span class="accent-hi">subcooling</span></h4>
+          <p style="font-size:13.5px;margin:0 0 10px">A thermostatic (or electronic) expansion valve <b>actively modulates</b> refrigerant flow to <b>hold a steady evaporator superheat</b>. So when you add or pull charge, the valve compensates and <b>superheat barely moves</b> — it can't tell you whether the charge is right.</p>
+          <p style="font-size:13.5px;margin:0 0 10px">What <i>does</i> respond to charge is the liquid stacking in the condenser — i.e. <b>subcooling</b>. Add refrigerant → subcooling climbs; recover → it drops. That's a clean, direct charging signal.</p>
+          <p style="font-size:13.5px;margin:0"><b>How you charge:</b> weigh/adjust to the <b>subcooling target on the data plate</b> (commonly 8–12&nbsp;°F). Superheat is just a check that the valve is doing its job.</p>
+        </div>
+        <div class="card" style="border-left:3px solid var(--lo);background:color-mix(in srgb,var(--lo) 6%,var(--panel))">
+          <div class="kpi" style="font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">Fixed orifice / piston</div>
+          <h4 style="font-family:var(--disp);font-weight:700;font-size:19px;text-transform:uppercase;margin:4px 0 8px">Charge to <span class="accent-lo">superheat</span></h4>
+          <p style="font-size:13.5px;margin:0 0 10px">A piston is a <b>fixed restriction</b> — it can't modulate. So superheat is <b>free to float with charge and load</b>: add refrigerant → more liquid fills the coil → superheat falls; pull charge → the coil starves → superheat rises. That makes superheat the meaningful indicator.</p>
+          <p style="font-size:13.5px;margin:0 0 10px">There's <b>no single target number</b>. You read the <b>manufacturer's charging chart</b>, which sets the target superheat from the <b>outdoor dry-bulb</b> and <b>indoor wet-bulb</b> on the day.</p>
+          <p style="font-size:13.5px;margin:0"><b>How you charge:</b> adjust to the <b>chart's target superheat</b>. On a fixed orifice, <b>subcooling is informational only</b>.</p>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;margin-top:16px">
+        <table>
+          <tr><th>Metering device</th><th>Can it modulate?</th><th>Charge to</th><th>The other number is…</th></tr>
+          <tr><td><b class="accent-hi">TXV / EEV</b></td><td>Yes — holds superheat steady</td><td><b>Subcooling</b> (data-plate target)</td><td>Superheat — a check the valve controls</td></tr>
+          <tr><td><b class="accent-lo">Fixed orifice / piston</b></td><td>No — fixed restriction</td><td><b>Superheat</b> (charging chart)</td><td>Subcooling — informational only</td></tr>
+        </table>
+      </div>
+      <p class="note" style="margin:14px 0 0">Either way: <b>confirm airflow first</b> (indoor and outdoor) and check the actual splits before touching charge, and <b>always defer to the unit's data plate / charging chart</b>. The ranges here are typical, not targets.</p>
+    </div>
+
+    <div class="card">
+      <span class="eyebrow">The one move</span>
+      <p style="font-size:14.5px;margin:8px 0 4px"><b>Gauge pressure → saturation temperature → subtract.</b></p>
+      <p style="font-size:13.5px;margin:0 0 4px"><b class="accent-lo">Superheat</b> = suction-line temp − saturation temp at the suction pressure, using the <b>dew</b> point.</p>
+      <p style="font-size:13.5px;margin:0"><b class="accent-hi">Subcooling</b> = saturation temp at the liquid pressure − liquid-line temp, using the <b>bubble</b> point. <span class="small">(Pure refrigerants — R-22, R-32 — have one number; R-410A is effectively one; R-454B glides, so mind the column.)</span></p>
+      <p class="small" style="margin:12px 0 0">Try it live on the <b>Calculator</b> tab, then test yourself on <b>Practice</b>.</p>
     </div>
   </section>
 
@@ -835,7 +900,7 @@ $("amb").addEventListener("input",e=>{AMB=+e.target.value;$("ambOut").textConten
 /* ============================================================
    TABS
    ============================================================ */
-const VIEWS={cycle:"view-cycle",lookup:"view-lookup",calc:"view-calc",scn:"view-scn",practice:"view-practice",ref:"view-ref"};
+const VIEWS={cycle:"view-cycle",basics:"view-basics",lookup:"view-lookup",calc:"view-calc",scn:"view-scn",practice:"view-practice",ref:"view-ref"};
 let activeTab="cycle";
 $("tabs").addEventListener("click",e=>{
   const b=e.target.closest(".tab");if(!b)return;
