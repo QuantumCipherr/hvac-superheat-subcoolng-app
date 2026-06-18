@@ -292,6 +292,18 @@
     #pracPrint .pq .ans{font-family:var(--mono);font-size:11px;color:#000;margin-top:4px}
     #pracPrint .pq .work{font-family:var(--mono);font-size:10.5px;color:#333;white-space:pre-wrap;margin-top:3px}
     #pracPrint .pagebreak{break-before:page}
+    #pracPrint .tchart h1{font-size:17px;margin:0 0 2px}
+    #pracPrint .tchart h2{font-size:12.5px;margin:14px 0 5px;text-transform:uppercase;letter-spacing:.04em}
+    #pracPrint .tchart .ph{font-size:10px;color:#333;margin:0 0 10px;border-bottom:1px solid #000;padding-bottom:6px}
+    #pracPrint .tchart table{width:100%;border-collapse:collapse;font-size:9.5px;margin:0 0 6px}
+    #pracPrint .tchart th,#pracPrint .tchart td{border:1px solid #999;padding:4px 5px;text-align:left;vertical-align:top;color:#000;break-inside:avoid}
+    #pracPrint .tchart th{background:#ececec;font-weight:700}
+    #pracPrint .tchart .rng{color:#555;font-size:8.5px}
+    #pracPrint .tchart table.fc td{text-align:center}
+    #pracPrint .tchart table.fc td.ok{background:#e9f6ee}
+    #pracPrint .tchart table.fc .d{font-weight:700;font-size:10px}
+    #pracPrint .tchart table.fc .s{color:#555;font-size:8.5px}
+    #pracPrint .tchart .foot{font-size:9px;color:#222;margin-top:8px;line-height:1.5}
   }
 </style>
 </head>
@@ -723,7 +735,10 @@
     </div>
 
     <div class="card" style="overflow-x:auto;margin-bottom:18px">
-      <span class="eyebrow">Symptom guide — the common faults</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="eyebrow" style="margin:0">Symptom guide — the common faults</span>
+        <button class="btn ghost" id="tchartPdf" style="padding:8px 12px">⤓ Download PDF</button>
+      </div>
       <table id="faultTable"></table>
       <p class="note">Superheat / subcooling ranges are the same bands the Scenarios and Practice diagnosis use. Directions are <i>relative to a healthy system</i> — actual psig depends on the refrigerant and the day's conditions, which the bench computes live. Always confirm airflow (indoor and outdoor) and the splits, and defer to the data plate before condemning a charge.</p>
     </div>
@@ -1446,6 +1461,48 @@ function buildFaultTable(){
       <td class="small">${g.cause}</td></tr>`;
   }).join('');
   t.innerHTML=head+rows;
+}
+
+/* ---- Printable / "Save as PDF" troubleshooting chart (no PDF library —
+   uses the browser print dialog, like the worksheet). Pulls the SH/SC bands
+   from FAULTS so the chart matches the diagnosis engine. ---- */
+const FOURCORNER_PRINT=[
+  ["Liquid-line restriction","drier, kink, plugged metering","Slight undercharge / low load","verify airflow","Undercharge","low charge / leak"],
+  ["Slight overcharge / condenser airflow","check the high-side split","Correctly charged","in the window","Early undercharge","recheck after settling"],
+  ["Overcharge","liquid backing up in condenser","Low indoor airflow","dirty filter / coil / blower","Weak compression / low load","“low-low,” check valves"]
+];
+function troubleshootingChartHTML(){
+  const arrow=d=>d==="up"?"▲":d==="dn"?"▼":"≈";
+  const rows=FAULT_GUIDE.map(g=>{
+    const f=FAULTS[g.k];
+    return `<tr><td><b>${f.label}</b></td>`+
+      `<td>${arrow(g.sh[0])} ${g.sh[1]}<br><span class="rng">${f.sh[0]}–${f.sh[1]}°F</span></td>`+
+      `<td>${arrow(g.sc[0])} ${g.sc[1]}<br><span class="rng">${f.sc[0]}–${f.sc[1]}°F</span></td>`+
+      `<td>${arrow(g.suction[0])} ${g.suction[1]}</td>`+
+      `<td>${arrow(g.head[0])} ${g.head[1]}</td>`+
+      `<td>${g.tells}</td><td>${g.cause}</td></tr>`;
+  }).join('');
+  const shLab=["Superheat HIGH","Superheat NORMAL","Superheat LOW"];
+  const fc=FOURCORNER_PRINT.map((row,r)=>{
+    let cells=`<th>${shLab[r]}</th>`;
+    for(let c=0;c<3;c++){const d=row[c*2],s=row[c*2+1];const ok=(r===1&&c===1);
+      cells+=`<td${ok?' class="ok"':''}><div class="d">${d}</div><div class="s">${s}</div></td>`;}
+    return `<tr>${cells}</tr>`;
+  }).join('');
+  return `<div class="tchart">
+    <h1>HVAC Superheat / Subcooling Troubleshooting Chart</h1>
+    <div class="ph">The Gauge Bench · arrows ▲ high ▼ low ≈ normal, relative to a healthy system · SH/SC bands match the trainer's diagnosis engine</div>
+    <h2>Symptom guide</h2>
+    <table class="tg"><tr><th>Fault</th><th>Superheat</th><th>Subcooling</th><th>Suction (low)</th><th>Head (high)</th><th>Other tells</th><th>Likely cause / where</th></tr>${rows}</table>
+    <h2>The four corners — Superheat × Subcooling</h2>
+    <table class="fc"><tr><th></th><th>Subcooling LOW</th><th>Subcooling NORMAL</th><th>Subcooling HIGH</th></tr>${fc}</table>
+    <p class="foot"><b>Superheat</b> = suction-line temp − saturation temp (dew). <b>Subcooling</b> = saturation temp (bubble) − liquid-line temp. <b>Charging:</b> TXV/EEV → subcooling (data plate); fixed orifice/piston → superheat (mfr chart). <b>Restriction vs undercharge:</b> both show high superheat + low suction — subcooling is the tiebreaker (undercharge LOW, restriction NORMAL-to-HIGH). Confirm indoor &amp; outdoor airflow and the splits, and defer to the data plate. EPA 608 required; R-32 &amp; R-454B are A2L (mildly flammable).</p>
+  </div>`;
+}
+function printTroubleshooting(){
+  const c=$("pracPrint");if(!c)return;
+  c.innerHTML=troubleshootingChartHTML();
+  if(typeof window!=="undefined"&&window.print)window.print();
 }
 
 /* ---- Fault simulator: drive the manifold + preview the readings for a
@@ -2695,6 +2752,7 @@ buildRefTable();
 buildFaultTable();
 buildFaultSim();
 renderFaultSim();
+$("tchartPdf").addEventListener("click",printTroubleshooting);
 enhanceA11y();
 initPractice();
 refreshAll();
