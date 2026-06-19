@@ -1,0 +1,14 @@
+{
+  "name": "The Gauge Bench — Superheat & Subcooling Trainer",
+  "short_name": "Gauge Bench",
+  "description": "HVAC superheat & subcooling trainer with graded practice problems, grounded in real PT data.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0e151b",
+  "theme_color": "#0e151b",
+  "icons": [
+    { "src": "favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any maskable" }
+  ]
+}
