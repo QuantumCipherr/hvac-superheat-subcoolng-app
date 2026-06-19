@@ -23,7 +23,7 @@
 <style>
   :root{
     --bg:#0e151b; --bg2:#0b1116; --panel:#161f27; --panel2:#1b262f;
-    --line:#2a3845; --line2:#37495a; --ink:#e9eff4; --muted:#8ba0ae; --muted2:#647888;
+    --line:#2a3845; --line2:#37495a; --ink:#eef3f7; --muted:#b2c2cf; --muted2:#8ea0af;
     --lo:#43b6ff; --lo-dim:#1c4860;
     --hi:#ff5a4d; --hi-dim:#5a2420;
     --good:#41cf90; --warn:#efb155; --bad:#ff6b5e; --brass:#caa86a;
@@ -41,7 +41,7 @@
       radial-gradient(1200px 600px at 80% -10%, #16222c 0%, transparent 60%),
       radial-gradient(900px 500px at 0% 0%, #131c24 0%, transparent 55%),
       var(--bg);
-    color:var(--ink); font-family:var(--sans); line-height:1.5; font-size:15px;
+    color:var(--ink); font-family:var(--sans); line-height:1.6; font-size:16px;
     -webkit-font-smoothing:antialiased;
   }
   a{color:var(--lo)}
@@ -92,7 +92,7 @@
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
   h2.title{font-family:var(--disp);font-weight:700;font-size:26px;letter-spacing:.4px;margin:0 0 4px;text-transform:uppercase}
-  .lede{color:var(--muted);max-width:64ch;margin:0 0 20px}
+  .lede{color:var(--ink);opacity:.93;max-width:66ch;margin:0 0 20px;font-size:16.5px;line-height:1.65}
   .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);margin:0 0 6px}
   .card{background:linear-gradient(165deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:var(--radius);padding:18px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -192,12 +192,16 @@
   .mtx td .d{font-family:var(--disp);font-weight:600;font-size:15px}
   .mtx td .s{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:3px}
   .mtx td.ok{background:color-mix(in srgb,var(--good) 10%,var(--bg2))}
-  .note{font-size:12.5px;color:var(--muted2);border-left:2px solid var(--line2);padding:4px 0 4px 12px;margin:14px 0}
+  .note{font-size:13.5px;color:var(--muted);border-left:2px solid var(--line2);padding:4px 0 4px 12px;margin:14px 0;line-height:1.55}
   .src{font-family:var(--mono);font-size:11.5px;color:var(--muted2);line-height:1.7}
   .danger{border:1px solid color-mix(in srgb,var(--hi) 40%,var(--line));background:color-mix(in srgb,var(--hi) 7%,var(--bg2));border-radius:10px;padding:13px 15px;font-size:13px}
   .danger b{color:var(--hi)}
   hr.sep{border:none;border-top:1px solid var(--line);margin:26px 0}
-  .small{font-size:12.5px;color:var(--muted)}
+  .small{font-size:13.5px;color:var(--muted);line-height:1.55}
+  .tdtable{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;margin:10px 0 0}
+  .tdtable th{text-align:left;color:var(--muted);font-weight:500;border-bottom:1px solid var(--line2);padding:5px 8px;text-transform:uppercase;letter-spacing:.06em;font-size:10.5px}
+  .tdtable td{padding:5px 8px;border-bottom:1px solid var(--line);color:var(--ink)}
+  .tdtable td:last-child{color:var(--good);text-align:right}
   .accent-lo{color:var(--lo)} .accent-hi{color:var(--hi)} .accent-good{color:var(--good)}
 
   @media (max-width:860px){
@@ -527,6 +531,12 @@
     <h2 class="title">Pressure ↔ temperature</h2>
     <p class="lede">Every saturated refrigerant has one pressure for each temperature. Enter one, get the other. For zeotropic blends the two saturation lines — <b>bubble</b> (liquid) and <b>dew</b> (vapor) — are both shown; the gap between them is the glide.</p>
 
+    <div class="selrow lookrefs">
+      <span class="cap">Refrigerant</span>
+      <div class="refset"></div>
+      <span class="small" style="margin-left:4px">Looking up <b class="cur-ref" style="font-family:var(--mono)"></b> — switch anytime; the chart and gauges follow.</span>
+    </div>
+
     <div class="lookup-grid">
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -851,6 +861,35 @@
       </div>
     </div>
 
+    <div class="card" style="margin-bottom:18px">
+      <span class="eyebrow">The air side — rule this out before the charge</span>
+      <h3 style="font-family:var(--disp);font-weight:700;font-size:21px;text-transform:uppercase;letter-spacing:.3px;margin:2px 0 10px">Airflow, static pressure &amp; temperature split</h3>
+      <p style="font-size:14.5px;margin:0 0 14px">Superheat and subcooling assume the coil is breathing. If airflow is wrong, the refrigerant readings lie — <b>low airflow looks just like an undercharge</b>. Check the air side <b>first</b>, before you ever touch the charge.</p>
+      <div class="grid2">
+        <div>
+          <span class="eyebrow">Airflow &amp; static pressure</span>
+          <p style="font-size:14px;margin:8px 0">Cooling wants about <b>400 CFM per ton</b> (working range 350–450): aim <b>~350</b> in humid climates to pull more moisture, <b>~450</b> in dry climates for more sensible cooling. On a 3-ton unit that's 1,050 / 1,200 / 1,350 CFM.</p>
+          <p style="font-size:14px;margin:8px 0"><b>Total External Static Pressure (TESP)</b> is the duct system's blood pressure: add the supply-side and return-side static as absolute values across the air handler (e.g. −0.20″ + 0.30″ = 0.50″). Standard residential gear is rated near <b>0.5″ w.c.</b> — higher means restricted ducts, a dirty filter, or a plugged coil. High static rides the blower up its curve and <b>cuts airflow</b>.</p>
+          <p class="note">Low airflow drives suction pressure down toward a frozen coil. On a fixed orifice it also drops superheat; a TXV holds superheat but capacity still tanks — so "superheat looks fine" can hide an airflow fault.</p>
+        </div>
+        <div>
+          <span class="eyebrow">Temperature split (ΔT)</span>
+          <p style="font-size:14px;margin:8px 0">Air-side split = <b>return-air temp − supply-air temp</b> across the coil. The old <b>20°F rule</b> is only a starting point — it assumes ~45–55% indoor humidity and ~400 CFM/ton. The real target <b>shifts with humidity</b>:</p>
+          <table class="tdtable"><thead><tr><th>Indoor RH</th><th>Target split</th></tr></thead><tbody>
+            <tr><td>20–30% (dry)</td><td>24–27 °F</td></tr>
+            <tr><td>30–40%</td><td>20–23 °F</td></tr>
+            <tr><td>40–50%</td><td>18–21 °F</td></tr>
+            <tr><td>50–60%</td><td>14–18 °F</td></tr>
+            <tr><td>60–70%</td><td>12–17 °F</td></tr>
+            <tr><td>70–80% (humid)</td><td>10–16 °F</td></tr>
+          </tbody></table>
+          <p class="note" style="margin-top:8px">Humid air carries more latent load, so more coil capacity condenses water instead of dropping temperature → smaller split. Source: Efficient Comfort TD chart.</p>
+          <p style="font-size:14px;margin:8px 0"><b>High split</b> (&gt;~22 °F): usually <b>low airflow</b> — dirty filter or coil, weak blower, high static. <b>Low split</b> (&lt;~14 °F): <b>high airflow</b>, or low charge / poor heat transfer.</p>
+          <p class="note">This air-side split is related to, but <b>not the same as</b>, refrigerant superheat — it's measured on the air, not the pipe. Use it as an independent cross-check.</p>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <span class="eyebrow">Data sources &amp; honest limits</span>
       <p class="src">
@@ -1028,15 +1067,18 @@ buildGauge($("gaugeHi"),700,"var(--hi)");
    REFRIGERANT SELECTOR + AMBIENT
    ============================================================ */
 function buildRefButtons(){
-  const box=$("refset");box.innerHTML="";
-  ORDER.forEach(k=>{
-    const r=REFS[k];
-    const b=document.createElement("button");
-    b.className="refbtn"+(k===CUR?" on":"");b.style.setProperty("--c",r.color);
-    b.innerHTML=`<span class="dot"></span>${k}`;
-    b.onclick=()=>{CUR=k;buildRefButtons();refreshAll();};
-    box.appendChild(b);
+  document.querySelectorAll(".refset").forEach(box=>{
+    box.innerHTML="";
+    ORDER.forEach(k=>{
+      const r=REFS[k];
+      const b=document.createElement("button");
+      b.className="refbtn"+(k===CUR?" on":"");b.style.setProperty("--c",r.color);
+      b.innerHTML=`<span class="dot"></span>${k}`;
+      b.onclick=()=>{CUR=k;buildRefButtons();refreshAll();};
+      box.appendChild(b);
+    });
   });
+  document.querySelectorAll(".cur-ref").forEach(el=>{el.textContent=CUR;el.style.color=(REFS[CUR]&&REFS[CUR].color)||"var(--brass)";});
 }
 $("amb").addEventListener("input",e=>{AMB=+e.target.value;$("ambOut").textContent=AMB+" °F";refreshCycle();if(activeTab==="faults"&&simFault)renderFaultSim();});
 
