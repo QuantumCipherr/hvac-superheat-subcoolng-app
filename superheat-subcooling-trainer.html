@@ -224,6 +224,10 @@
   .setup-col{display:flex;flex-direction:column;gap:18px;min-width:0}
   .setblock-types{background:var(--bg2);border:1px solid var(--line);border-radius:11px;padding:13px 15px}
   .setblock-types h4{margin-top:0}
+  .instructor-only{display:none}
+  body.instructor-on .instructor-only{display:block}
+  .instr-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:color-mix(in srgb,var(--brass) 12%,var(--bg2));border:1px solid color-mix(in srgb,var(--brass) 40%,var(--line2));border-radius:10px;padding:9px 13px}
+  .instr-tag{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--brass)}
   .setblock h4{margin:0 0 8px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
   .seg{display:inline-flex;border:1px solid var(--line2);border-radius:9px;overflow:hidden;flex-wrap:wrap}
   .seg button{font-family:var(--mono);font-size:12.5px;background:var(--bg2);color:var(--muted);border:none;padding:8px 13px;cursor:pointer;border-right:1px solid var(--line)}
@@ -293,6 +297,12 @@
   .recentChip{font-family:var(--mono);font-size:12.5px;background:var(--bg2);border:1px solid var(--line2);color:var(--ink);border-radius:8px;padding:8px 12px;cursor:pointer;margin:0 6px 6px 0}
   .recentChip:hover{border-color:var(--lo)}
   .loginNote{font-size:11.5px;color:var(--muted2);margin-top:16px;line-height:1.55}
+  .loginInstr{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  .instrToggle{background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;padding:0}
+  .instrToggle:hover{color:var(--brass)}
+  .loginInstr label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+  .loginInstr input[type=password]{width:100%;font-family:var(--mono);font-size:16px;background:var(--bg2);border:1px solid var(--line2);color:var(--ink);border-radius:9px;padding:11px 12px;margin-bottom:14px;outline:none}
+  .loginInstr input[type=password]:focus{border-color:var(--brass);box-shadow:0 0 0 3px color-mix(in srgb,var(--brass) 20%,transparent)}
 
   @media print{
     @page{margin:14mm}
@@ -339,6 +349,16 @@
     <button class="btn" id="loginStart">Start practicing</button>
     <div class="loginRecent" id="loginRecent" style="display:none"></div>
     <p class="loginNote">Your name and progress are saved only on this device — no account, no server. Use the same name and class code to pick up where you left off.</p>
+    <div class="loginInstr">
+      <button type="button" class="instrToggle" id="instrToggle" aria-expanded="false">Instructor sign-in →</button>
+      <div id="instrPanel" style="display:none;margin-top:12px">
+        <label for="instrCode">Instructor code</label>
+        <input type="password" id="instrCode" autocomplete="off" placeholder="Enter instructor code">
+        <div class="loginErr" id="instrErr"></div>
+        <button class="btn ghost" id="instrUnlock" type="button">Unlock instructor tools</button>
+        <p class="loginNote" style="margin-top:12px">Unlocks the assignment, answer-key, and results-review tools on this device only. Students never see them.</p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -681,29 +701,35 @@
         </div>
       </div>
 
-      <hr class="sep" style="margin:18px 0">
-      <div class="setblock" style="margin:0">
-        <h4>Instructor · assign to the class</h4>
-        <p class="small" style="margin:2px 0 10px">Copy a link that opens this exact set (same level, types, refrigerants, mode, and seed) and auto-starts it for every student — or print a worksheet and matching answer key. The link and the sheets all agree because they share the seed.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn" id="pracCopyLink">Copy assignment link</button>
-          <button class="btn ghost" id="pracPrintWS">Print worksheet</button>
-          <button class="btn ghost" id="pracPrintKey">Print answer key</button>
-          <button class="btn ghost" id="pracCopyWS">Copy worksheet text</button>
-          <button class="btn ghost" id="pracCopyKey">Copy answer key text</button>
+      <div id="instructorTools" class="instructor-only">
+        <hr class="sep" style="margin:18px 0">
+        <div class="instr-banner">
+          <span class="instr-tag">★ Instructor mode — these tools are hidden from students</span>
+          <button class="btn ghost" id="instrLock" type="button">Lock</button>
         </div>
-        <p class="small" id="pracCopyMsg" style="margin:8px 0 0;min-height:1em;color:var(--good)"></p>
-      </div>
+        <div class="setblock" style="margin:14px 0 0">
+          <h4>Instructor · assign to the class</h4>
+          <p class="small" style="margin:2px 0 10px">Copy a link that opens this exact set (same level, types, refrigerants, mode, and seed) and auto-starts it for every student — or print a worksheet and matching answer key. The link and the sheets all agree because they share the seed.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn" id="pracCopyLink">Copy assignment link</button>
+            <button class="btn ghost" id="pracPrintWS">Print worksheet</button>
+            <button class="btn ghost" id="pracPrintKey">Print answer key</button>
+            <button class="btn ghost" id="pracCopyWS">Copy worksheet text</button>
+            <button class="btn ghost" id="pracCopyKey">Copy answer key text</button>
+          </div>
+          <p class="small" id="pracCopyMsg" style="margin:8px 0 0;min-height:1em;color:var(--good)"></p>
+        </div>
 
-      <hr class="sep" style="margin:18px 0">
-      <div class="setblock" style="margin:0">
-        <h4>Instructor · read a student results code</h4>
-        <p class="small" style="margin:2px 0 10px">Paste a code a student sent after finishing a set to see their name, score, and missed concepts.</p>
-        <div class="seedrow" style="align-items:flex-start">
-          <input type="text" id="resReviewIn" placeholder="GB1-…" style="flex:1;min-width:200px;font-family:var(--mono);font-size:14px;background:var(--bg2);border:1px solid var(--line2);color:var(--ink);border-radius:9px;padding:10px 12px">
-          <button class="btn ghost" id="resReviewBtn">Read code</button>
+        <hr class="sep" style="margin:18px 0">
+        <div class="setblock" style="margin:0">
+          <h4>Instructor · read a student results code</h4>
+          <p class="small" style="margin:2px 0 10px">Paste a code a student sent after finishing a set to see their name, score, and missed concepts.</p>
+          <div class="seedrow" style="align-items:flex-start">
+            <input type="text" id="resReviewIn" placeholder="GB1-…" style="flex:1;min-width:200px;font-family:var(--mono);font-size:14px;background:var(--bg2);border:1px solid var(--line2);color:var(--ink);border-radius:9px;padding:10px 12px">
+            <button class="btn ghost" id="resReviewBtn">Read code</button>
+          </div>
+          <div id="resReviewOut" class="small" style="margin:10px 0 0"></div>
         </div>
-        <div id="resReviewOut" class="small" style="margin:10px 0 0"></div>
       </div>
     </div>
 
@@ -2792,6 +2818,44 @@ function track(event,props){try{
   _mp.track(event,Object.assign(base,props||{}));
 }catch(e){}}
 
+/* ===== Instructor mode — code-gated; assignment/answer-key/results tools are hidden from students =====
+   INSTRUCTOR_HASH is the SHA-256 of the secret code (plaintext is never in this file).
+   To change the code, run:  printf '%s' "YOUR-NEW-CODE" | shasum -a 256
+   and paste the resulting hash below. */
+const INSTRUCTOR_HASH="7fa7bc4fe040d10df7bbe9ee14cdf5323627bfa26aaba5920a91a3cd90724ff3";
+const INSTR_KEY="gb_instructor";
+async function sha256hex(str){
+  const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function enableInstructor(persist){document.body.classList.add("instructor-on");if(persist){try{localStorage.setItem(INSTR_KEY,"1");}catch(e){}}}
+function disableInstructor(){document.body.classList.remove("instructor-on");try{localStorage.removeItem(INSTR_KEY);}catch(e){}}
+function initInstructorMode(){
+  try{if(localStorage.getItem(INSTR_KEY)==="1")document.body.classList.add("instructor-on");}catch(e){}
+  const tgl=$("instrToggle"),panel=$("instrPanel"),codeIn=$("instrCode"),err=$("instrErr"),unlock=$("instrUnlock"),lock=$("instrLock");
+  if(tgl&&panel)tgl.addEventListener("click",()=>{
+    const open=panel.style.display!=="none";
+    panel.style.display=open?"none":"block";
+    tgl.setAttribute("aria-expanded",open?"false":"true");
+    if(!open&&codeIn)codeIn.focus();
+  });
+  async function attempt(){
+    if(!codeIn)return;
+    const code=codeIn.value.trim();
+    if(!code){if(err)err.textContent="Enter the instructor code.";return;}
+    let ok=false;
+    try{ok=(await sha256hex(code))===INSTRUCTOR_HASH;}
+    catch(e){if(err)err.textContent="Secure check unavailable here — open the https link.";return;}
+    if(!ok){if(err)err.textContent="Incorrect code.";codeIn.value="";return;}
+    if(err)err.textContent="";codeIn.value="";
+    enableInstructor(true);track("instructor_unlock",{});
+    signIn(($("loginName")&&$("loginName").value)||"Instructor",($("loginClass")&&$("loginClass").value)||"");
+  }
+  if(unlock)unlock.addEventListener("click",attempt);
+  if(codeIn)codeIn.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();attempt();}});
+  if(lock)lock.addEventListener("click",disableInstructor);
+}
+
 /* init */
 buildRefButtons();
 drawCycle();
@@ -2804,6 +2868,7 @@ $("tchartPdf").addEventListener("click",printTroubleshooting);
 enhanceA11y();
 initPractice();
 refreshAll();
+initInstructorMode();
 initAnalytics();
 </script>
 </body>
